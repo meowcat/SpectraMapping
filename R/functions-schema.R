@@ -1,4 +1,4 @@
-##' @param f `character(1)` with the path to an mgf file.
+##' @param f `character(1)` with the path to an schema file.
 ##' 
 ##' @param msLevel `numeric(1)` with the MS level. Default is 2.
 ##' 
@@ -8,39 +8,17 @@
 ##'
 ##' @importFrom IRanges NumericList
 ##' 
-##' @author Laurent Gatto
+##' @author Michael Stravs
 ##' 
 ##' @noRd
-.read_mgf <- function(f, msLevel = 2L, ...) {
+.read_schema <- function(o, f, ...) {
     if (length(f) != 1L)
-        stop("Please provide a single mgf file.")
-    mgf <- scan(file = f, what = "",
-                sep = "\n", quote = "",
-                allowEscapes = FALSE,
-                quiet = TRUE)
-    ## From http://www.matrixscience.com/help/data_file_help.html#GEN
-    ## Comment lines beginning with one of the symbols #;!/ can be
-    ## included, but only outside of the BEGIN IONS and END IONS
-    ## statements that delimit an MS/MS dataset.
-    cmts <- grep("^[#;!/]", mgf)
-    if (length(cmts))
-        mgf <- mgf[-cmts]
-
-    begin <- grep("BEGIN IONS", mgf) + 1L
-    end <- grep("END IONS", mgf) - 1L
-    n <- length(begin)
-    sp <- vector("list", length = n)
-
-    for (i in seq(along = sp)) 
-        sp[[i]] <- .extract_mgf_spectrum(mgf[begin[i]:end[i]])
-
-    res <- DataFrame(do.call(rbind, sp))
-
-    for (i in seq_along(res)) {
-        if (all(lengths(res[[i]]) == 1))
-            res[[i]] <- unlist(res[[i]])
-    }
-
+        stop("Please provide a single schema file.")
+    
+    data <- read_file(f) %>% str_remove_all("\r")
+    data_parsed <- o@format$reader(data)
+    return(data_parsed)
+    
     res$mz <- IRanges::NumericList(res$mz)
     res$intensity <- IRanges::NumericList(res$intensity)
     res$dataOrigin <- f
@@ -48,7 +26,24 @@
     res
 }
 
-##' @param mgf `character()` of lines defining a spectrum in mgf
+.fill_variables <- function(o) {
+    vars_ <- o@format$mapping %>% filter(type=="read")
+    vars_table <- vars_ %>% 
+        inner_join(o@variables, by = c("formatKey" = "key")) %>%
+        pivot_wider(id_cols = "spectrum_id",
+                    names_from = "spectraKey",
+                    values_from = "value") %>%
+        arrange(spectrum_id)
+    o@spectraData <- DataFrame(vars_table)
+    o
+}
+
+.subset_peaks <- function(o) {
+    o@peaks %>%
+        filter(spectrum_id %in% o@spectraData$spectrumId)
+}
+
+##' @param schema `character()` of lines defining a spectrum in schema
 ##'     format.
 ##' 
 ##' @author Laurent Gatto
@@ -56,11 +51,11 @@
 ##' @importFrom stats setNames
 ##'
 ##' @noRd
-.extract_mgf_spectrum <- function(mgf) {
+.extract_schema_spectrum <- function(schema) {
     ## grep description
-    desc.idx <- grep("=", mgf)
-    desc <- mgf[desc.idx]
-    spec <- mgf[-desc.idx]
+    desc.idx <- grep("=", schema)
+    desc <- schema[desc.idx]
+    spec <- schema[-desc.idx]
 
     ms <- do.call(rbind, strsplit(spec, "[[:space:]]+"))
     mode(ms) <- "double"

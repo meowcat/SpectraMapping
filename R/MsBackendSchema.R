@@ -1,24 +1,26 @@
+library(Spectra)
+library(tidyverse)
 #' @include hidden_aliases.R
 NULL
 
-#' @title MS data backend for mgf files
+#' @title MS data backend for Schema files
 #'
-#' @aliases MsBackendMgf-class
+#' @aliases MsBackendSchema-class
 #'
 #' @description
 #'
-#' The `MsBackendMgf` class supports import of MS/MS spectra data from
+#' The `MsBackendSchema` class supports import of MS/MS spectra data from
 #' files in Mascot Generic Format
-#' ([mgf](http://www.matrixscience.com/help/data_file_help.html))
+#' ([Schema](http://www.matrixscience.com/help/data_file_help.html))
 #' files. After initial import, the full MS data is kept in
-#' memory. `MsBackendMgf` extends the [MsBackendDataFrame()] backend
+#' memory. `MsBackendSchema` extends the [MsBackendDataFrame()] backend
 #' directly and supports thus the [applyProcessing()] function to make
 #' data manipulations persistent. The backend does however not
-#' support export to mgf files yet.
+#' support export to Schema files yet.
 #'
-#' New objects are created with the `MsBackendMgf` function. The
+#' New objects are created with the `MsBackendSchema` function. The
 #' `backendInitialize` method has to be subsequently called to
-#' initialize the object and import MS/MS data from (one or more) mgf
+#' initialize the object and import MS/MS data from (one or more) Schema
 #' files.  Optional parameter `nonStop` allows to specify whether the
 #' import returns with an error if one of the xml files lacks required
 #' data, such as `mz` and `intensity` values (default `nonStop =
@@ -27,9 +29,9 @@ NULL
 #' (such as xml import error) will abort import regardless of
 #' parameter `nonStop`.
 #'
-#' @param object Instance of `MsBackendMgf` class.
+#' @param object Instance of `MsBackendSchema` class.
 #'
-#' @param files `character` with the (full) file name(s) of the mgf file(s)
+#' @param files `character` with the (full) file name(s) of the Schema file(s)
 #'     from which MS/MS data should be imported.
 #'
 #' @param nonStop `logical(1)` whether import should be stopped if an
@@ -42,20 +44,20 @@ NULL
 #'
 #' @param ... Currently ignored.
 #'
-#' @author Laurent Gatto and Johannes Rainer
+#' @author Michele Stravs <stravs@@imsb.biol.ethz.ch>
 #'
 #' @importClassesFrom Spectra MsBackendDataFrame
 #'
-#' @exportClass MsBackendMgf
+#' @exportClass MsBackendSchema
 #'
-#' @name MsBackendMgf
+#' @name MsBackendSchema
 #'
 #' @examples
 #'
-#' ## Create an MsBackendHmdbXml backend and import data from test xml files.
-#' fls <- dir(system.file("extdata", package = "MsBackendMgf"),
-#'     full.names = TRUE, pattern = "mgf$")
-#' be <- backendInitialize(MsBackendMgf(), fls)
+#' ## Create an MsBackendSchema backend and import data from test mgf files
+#' fls <- dir(system.file("extdata", package = "MsBackendSchema"),
+#'     full.names = TRUE, pattern = "Schema$")
+#' be <- backendInitialize(MsBackendSchema(), fls)
 #' be
 #'
 #' be$msLevel
@@ -63,9 +65,22 @@ NULL
 #' be$mz
 NULL
 
-setClass("MsBackendMgf",
+
+dummyFormat <- list()
+class(dummyFormat) <- c(class(dummyFormat), "MsFormat")
+setOldClass("MsFormat")
+
+
+setClass("MsBackendSchema",
          contains = "MsBackendDataFrame",
+         slots = c(format = "MsFormat",
+                   variables = "data.frame",
+                   peaks = "data.frame"
+                   ),
          prototype = prototype(spectraData = DataFrame(),
+                               format = dummyFormat,
+                               variables = tibble(),
+                               peaks = tibble(),
                                readonly = FALSE,
                                version = "0.1"))
 
@@ -79,9 +94,9 @@ setClass("MsBackendMgf",
 #'
 #' @exportMethod backendInitialize
 #'
-#' @rdname MsBackendMgf
-setMethod("backendInitialize", signature = "MsBackendMgf",
-          function(object, files, nonStop = FALSE, ..., BPPARAM = bpparam()) {
+#' @rdname MsBackendSchema
+setMethod("backendInitialize", signature = "MsBackendSchema",
+          function(object, files, nonStop = FALSE, parallel = FALSE, ...) {
               if (missing(files) || !length(files))
                   stop("Parameter 'files' is mandatory for ", class(object))
               if (!is.character(files))
@@ -96,25 +111,63 @@ setMethod("backendInitialize", signature = "MsBackendMgf",
               ## Import data and rbind.
               message("Start data import from ", length(files), " files ... ",
                       appendLF = FALSE)
-              res <- bplapply(files, FUN = .read_mgf,
-                              nonStop = nonStop, BPPARAM = BPPARAM)
+              res <- .read_schema(object, files)
+              object@peaks <- map_dfr(res, "ions", .id = "spectrum_id")
+              object@variables <- map_dfr(res, "variables", .id = "spectrum_id")
               message("done")
+              object <- .fill_variables(object)
+              object$dataStorage <- "<memory>"
+              object$centroided <- TRUE
+              return(object)
+              
               res <- do.call(rbind, res)
               if (nonStop && length(files) > nrow(res))
                       warning("Import failed for ", length(files) - nrow(res),
                               " files")
               asDataFrame(object) <- res
-              object$dataStorage <- "<memory>"
-              object$centroided <- TRUE
+
               validObject(object)
               object
           })
 
-#' @rdname MsBackendMgf
+
+#' @rdname hidden_aliases
+setMethod("as.list", "MsBackendSchema", function(x) {
+  if (!length(x))
+    return(list())
+  .subset_peaks(x) %>%
+    group_by(spectrum_id) %>% 
+    group_split() %>%
+    map(~ as.matrix(.x[,c("mz", "int")]))
+})
+
+#' @rdname hidden_aliases
+setMethod("intensity", "MsBackendSchema", function(object) {
+  NumericList(lapply(as.list(object), "[", , 2), compress = FALSE)
+})
+
+#' @rdname hidden_aliases
+setMethod("mz", "MsBackendSchema", function(object) {
+  NumericList(lapply(as.list(object), "[", , 1), compress = FALSE)
+})
+
+setMethod("ionCount", "MsBackendSchema", function(object) {
+  .subset_peaks(object) %>% 
+    group_by(spectrum_id) %>%
+    n()
+})
+
+#' @rdname hidden_aliases
+setMethod("lengths", "MsBackendSchema", function(x, use.names = FALSE) {
+  lengths(mz(x))
+})
+
+
+#' @rdname MsBackendSchema
 #'
 #' @importFrom methods new
 #'
-#' @export MsBackendMgf
-MsBackendMgf <- function() {
-    new("MsBackendMgf")
+#' @export MsBackendSchema
+MsBackendSchema <- function(format) {
+    new("MsBackendSchema", format = format)
 }
