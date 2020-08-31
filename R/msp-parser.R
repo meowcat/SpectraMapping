@@ -1,5 +1,5 @@
 
-.msp_reader <- function(parallel = FALSE, single_spectrum = FALSE) {
+.msp_reader <- function(parallel = FALSE, single_spectrum = FALSE, progress=FALSE) {
   
   # Properties of type XXX=value\n
   ## Key
@@ -13,7 +13,7 @@
   )
   # Property
   specVariable <- specify(
-    query = (specVariable_key %then% String(": ") %then% specVariable_value %then% newline 
+    query = (specVariable_key %then% fixed_string(": ") %then% specVariable_value %then% newline 
              %using% function(x) {
                list(key = x[[1]], value = x[[3]])
              }),
@@ -26,7 +26,7 @@
   # Ion table entries of type 123.1234 999
   ion_plain <- specify(
     query=(
-      (float() %then% spacing %then% float() %then% newline) 
+      (float %then% spacing %then% float %then% newline) 
       %using% 
         function(x) list(mz = x[[1]], int = x[[3]], annotation = NA)
     ),
@@ -34,9 +34,9 @@
     leftovers = c("",""))
   ion_annotated <- specify(
     query=(
-      (float() %then% spacing %then% float() 
+      (float %then% spacing %then% float 
        %then% spacing %then% 
-         String("\"") %then% delimited_string("\"") %then% String("\"") %then% newline) 
+         fixed_string("\"") %then% delimited_string("\"") %then% fixed_string("\"") %then% newline) 
       %using% 
         function(x) list(mz = x[[1]], int = x[[3]], annotation = x[[6]])
     ),
@@ -48,13 +48,13 @@
   
   # Spectrum: spectrum start delimiter, variable block, ion table, spectrum end delimiter
   ## Spectrum delimiters
-  end_marker <- zap_entry(many(newline))
+  end_marker <- zap_entry(many_iter(newline))
   ## spectrum
   spectrum <- specify(
     query = ((
-               (many(specVariable) %using% bind_rows)
+               (many_iter(specVariable) %using% bind_rows)
              %then% 
-               (many(ion) %using% bind_rows)
+               (many_iter(ion) %using% bind_rows)
              %then% 
                 end_marker)
     %using% function(x) compact(x) %>% (function(xx) list(variables = xx[[1]], ions = xx[[2]]))),
@@ -64,15 +64,36 @@
   if(single_spectrum)
     return(spectrum)
   
+  
+  
+  safe_spectrum <- function(x, pb=NULL) {
+    tryCatch({
+      if(!is.null(pb))
+        pb$tick()
+      spectrum(x)
+    },
+    error=function(e) {
+      message("Error: ", x)
+      return(list(result=NULL))
+    })
+  }
+  
   document <- function(data) {
-    data_ <- str_split(data, fixed("\n\n"))
+    
+    data_ <- str_split(data, "\n\n+")
     data_ <- data_[[1]]
+    
+    pb <- NULL
+    if(progress)
+      pb <- progress::progress_bar$new(total = length(data_))
+    
     if(!parallel)
-      return(data_ %>% map(spectrum) %>% map("result"))
+      return(data_ %>% map( ~ safe_spectrum(.x, pb)) %>% map("result") %>% compact())
     else
-      return(data_ %>% future_map(spectrum, .progress = TRUE) %>% map("result"))
+      return(data_ %>% future_map( ~ safe_spectrum(.x), .progress = progress) %>% map("result") %>% compact())
   }
   return(document)
+
 }
 
 

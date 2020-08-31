@@ -5,30 +5,34 @@
 NULL
 
 
-regex <- function(pattern, from_start = TRUE) 
+regex <- function(pattern) 
 {
-  if(from_start)
-    pattern <- paste0("^", pattern)
   return(function(string) {
-    res <- str_locate(string, pattern)[1,]
-    if(isTRUE(res[1] == 1)) {
-      result <- str_sub(string, res[1], res[2])
-      leftover <- str_sub(string, res[2] + 1)
+    pattern_ <- paste0("^", pattern)
+    res <- str_starts(string, pattern_)
+    if(isTRUE(res)) {
+      pattern_ <- paste0("^", pattern)
+      pos <- str_locate(string, pattern_)[1,]
+      result <- str_sub(string, pos[1], pos[2])
+      leftover <- str_sub(string, pos[2] + 1)
       return(succeed(result)(leftover))
     }
     else
       return(list())
   })
 }
+    
+
 
 
 fixed_string <- function(pattern) 
 {
   return(function(string) {
-    res <- str_locate(string, fixed(pattern))[1,]
-    if(isTRUE(res[1] == 1)) {
-      result <- str_sub(string, res[1], res[2])
-      leftover <- str_sub(string, res[2] + 1)
+    res <- str_starts(string, fixed(pattern))
+    if(isTRUE(res)) {
+      pos <- str_locate(string, fixed(pattern))[1,]
+      result <- str_sub(string, pos[1], pos[2])
+      leftover <- str_sub(string, pos[2] + 1)
       return(succeed(result)(leftover))
     }
     else
@@ -110,7 +114,7 @@ float <- regex("[0-9.]+")
 #' @export
 #'
 #' @examples
-many_iter <- function(p) {
+some_iter <- function(p) {
   function(string) {
     res <- list()
     res_ <- p(string)
@@ -124,6 +128,22 @@ many_iter <- function(p) {
     else
       return(list())
     }
+}
+
+many_iter <- function(p) {
+  function(string) {
+    res <- list()
+    res_ <- p(string)
+    while(length(res_) > 0) {
+      res <- c(res, list(res_$result))
+      string <- res_$leftover
+      res_ <- p(string)
+    }
+    if(length(res) > 0)
+      succeed(res)(string)
+    else
+      succeed(NULL)(string)
+  }
 }
 # 
 # 

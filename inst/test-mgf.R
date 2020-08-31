@@ -20,6 +20,17 @@ system.time(sp3 <- Spectra(
   massbank,
   source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE, progress = TRUE)))
 )
+library(MsBackendMgf)
+system.time(sp3 <- Spectra(
+  massbank,
+  source = MsBackendMgf())
+)
+
+massbank <- r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\MASSBANK.mgf)"
+system.time(sp3 <- Spectra(
+  massbank,
+  source = MsBackendMapping(format = MsFormatMgf(parallel=TRUE, progress = TRUE)))
+)
 
 
 system.time(
@@ -31,4 +42,4 @@ system.time(
 
 
 rdr <- MsFormatMgf(parallel=FALSE, progress = TRUE)$reader
-res <- rdr(read_lines(system.file("test_spectra/sample.mgf", package="SpectraMapping")))
+res <- rdr(read_file(system.file("test_spectra/sample.mgf", package="SpectraMapping")) %>% str_remove_all("\r"))

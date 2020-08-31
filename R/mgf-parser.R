@@ -39,7 +39,7 @@ NULL
   
   # Spectrum: spectrum start delimiter, variable block, ion table, spectrum end delimiter
   ## Spectrum delimiters
-  begin_marker <- zap_entry((many(newline)) %then% fixed_string("BEGIN IONS\n"))
+  begin_marker <- zap_entry((many_iter(newline)) %then% fixed_string("BEGIN IONS\n"))
   end_marker <- zap_entry((fixed_string("END IONS") %then% maybe(newline)))
   ## spectrum
   spectrum <- specify(
@@ -82,7 +82,7 @@ NULL
     if(!parallel)
       return(data_ %>% map( ~ safe_spectrum(.x, pb)) %>% map("result") %>% compact())
     else
-      return(data_ %>% future_map( ~ safe_spectrum(.x)) %>% map("result") %>% compact())
+      return(data_ %>% future_map( ~ safe_spectrum(.x), .progress = progress) %>% map("result") %>% compact())
   }
   return(document)
 }
