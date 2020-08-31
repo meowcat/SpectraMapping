@@ -3,24 +3,20 @@
 #' @import tibble
 NULL
 
-#' @title MS data backend for Schema files
+#' @title MS data backend for mapped text files
 #'
-#' @aliases MsBackendSchema-class
+#' @aliases MsBackendMapping-class
 #'
 #' @description
 #'
-#' The `MsBackendSchema` class supports import of MS/MS spectra data from
-#' files in Mascot Generic Format
-#' ([Schema](http://www.matrixscience.com/help/data_file_help.html))
-#' files. After initial import, the full MS data is kept in
-#' memory. `MsBackendSchema` extends the [MsBackendDataFrame()] backend
-#' directly and supports thus the [applyProcessing()] function to make
-#' data manipulations persistent. The backend does however not
-#' support export to Schema files yet.
+#' The `MsBackendMapping` class supports import of MS/MS spectra data from
+#' files in text format by a defined mapping. 
+#' After initial import, the full MS data is kept in
+#' memory. `MsBackendMapping` uses tibble/tidyverse stuff in the background.
 #'
-#' New objects are created with the `MsBackendSchema` function. The
+#' New objects are created with the `MsBackendMapping` function. The
 #' `backendInitialize` method has to be subsequently called to
-#' initialize the object and import MS/MS data from (one or more) Schema
+#' initialize the object and import MS/MS data from (one or more) 
 #' files.  Optional parameter `nonStop` allows to specify whether the
 #' import returns with an error if one of the xml files lacks required
 #' data, such as `mz` and `intensity` values (default `nonStop =
@@ -29,9 +25,9 @@ NULL
 #' (such as xml import error) will abort import regardless of
 #' parameter `nonStop`.
 #'
-#' @param object Instance of `MsBackendSchema` class.
+#' @param object Instance of `MsBackendMapping` class.
 #'
-#' @param files `character` with the (full) file name(s) of the Schema file(s)
+#' @param files `character` with the (full) file name(s) of the  file(s)
 #'     from which MS/MS data should be imported.
 #'
 #' @param nonStop `logical(1)` whether import should be stopped if an
@@ -48,21 +44,12 @@ NULL
 #'
 #' @importClassesFrom Spectra MsBackendDataFrame
 #'
-#' @exportClass MsBackendSchema
+#' @exportClass MsBackendMapping
 #'
-#' @name MsBackendSchema
+#' @name MsBackendMapping
 #'
 #' @examples
 #'
-#' ## Create an MsBackendSchema backend and import data from test mgf files
-#' fls <- dir(system.file("extdata", package = "MsBackendSchema"),
-#'     full.names = TRUE, pattern = "Schema$")
-#' be <- backendInitialize(MsBackendSchema(), fls)
-#' be
-#'
-#' be$msLevel
-#' be$intensity
-#' be$mz
 NULL
 
 
@@ -71,7 +58,7 @@ class(dummyFormat) <- c(class(dummyFormat), "MsFormat")
 setOldClass("MsFormat")
 
 
-setClass("MsBackendSchema",
+setClass("MsBackendMapping",
          contains = "MsBackendDataFrame",
          slots = c(format = "MsFormat",
                    variables = "data.frame",
@@ -96,8 +83,8 @@ setClass("MsBackendSchema",
 #'
 #' @exportMethod backendInitialize
 #'
-#' @rdname MsBackendSchema
-setMethod("backendInitialize", signature = "MsBackendSchema",
+#' @rdname MsBackendMapping
+setMethod("backendInitialize", signature = "MsBackendMapping",
           function(object, files, nonStop = FALSE, parallel = FALSE, ...) {
               if (missing(files) || !length(files))
                   stop("Parameter 'files' is mandatory for ", class(object))
@@ -113,7 +100,7 @@ setMethod("backendInitialize", signature = "MsBackendSchema",
               ## Import data and rbind.
               message("Start data import from ", length(files), " files ... ",
                       appendLF = FALSE)
-              res <- .read_schema(object, files)
+              res <- .read_mapping(object, files)
               object@peaks <- map_dfr(res, "ions", .id = "spectrum_id")
               object@variables <- map_dfr(res, "variables", .id = "spectrum_id")
               message("done")
@@ -127,7 +114,7 @@ setMethod("backendInitialize", signature = "MsBackendSchema",
 
 
 #' @rdname hidden_aliases
-setMethod("as.list", "MsBackendSchema", function(x) {
+setMethod("as.list", "MsBackendMapping", function(x) {
   if (!length(x))
     return(list())
   .subset_peaks(x) %>%
@@ -137,32 +124,32 @@ setMethod("as.list", "MsBackendSchema", function(x) {
 })
 
 #' @rdname hidden_aliases
-setMethod("intensity", "MsBackendSchema", function(object) {
+setMethod("intensity", "MsBackendMapping", function(object) {
   NumericList(lapply(as.list(object), "[", , 2), compress = FALSE)
 })
 
 #' @rdname hidden_aliases
-setMethod("mz", "MsBackendSchema", function(object) {
+setMethod("mz", "MsBackendMapping", function(object) {
   NumericList(lapply(as.list(object), "[", , 1), compress = FALSE)
 })
 
-setMethod("ionCount", "MsBackendSchema", function(object) {
+setMethod("ionCount", "MsBackendMapping", function(object) {
   .subset_peaks(object) %>% 
     group_by(spectrum_id) %>%
     n()
 })
 
 #' @rdname hidden_aliases
-setMethod("lengths", "MsBackendSchema", function(x, use.names = FALSE) {
+setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
   lengths(mz(x))
 })
 
 
-#' @rdname MsBackendSchema
+#' @rdname MsBackendMapping
 #'
 #' @importFrom methods new
 #'
-#' @export MsBackendSchema
-MsBackendSchema <- function(format, fields = .load_default_fields()) {
-    new("MsBackendSchema", format = format, fields = fields)
+#' @export MsBackendMapping
+MsBackendMapping <- function(format, fields = .load_default_fields()) {
+    new("MsBackendMapping", format = format, fields = fields)
 }

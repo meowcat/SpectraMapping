@@ -1,5 +1,5 @@
-Package: MsBackendSchema
-Title: Mass Spectrometry Data Backend for text-based files
+Package: SpectraMapping
+Title: Mapping between spectra formats
 Version: 0.1.0
 Authors@R: 
     c(person(given = "Michele", family = "Stravs",
@@ -33,7 +33,7 @@ Roxygen: list(markdown=TRUE)
 RoxygenNote: 7.1.1
 Collate: 
     'hidden_aliases.R'
-    'MsBackendSchema.R'
+    'MsBackendMapping.R'
     'format-utils.R'
     'functions-schema.R'
     'mgf-format.R'
@@ -41,4 +41,3 @@ Collate:
     'msp-format.R'
     'msp-parser.R'
     'parser-utils.R'
-    'parser.R'

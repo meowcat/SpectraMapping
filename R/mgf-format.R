@@ -11,7 +11,7 @@ MsFormatMgf <- function(parallel = FALSE) {
 }
 
 .mgf_mapping <- function() {
-  mapping <- loadSpectraMapping(system.file("mapping/mgf-schema.yaml", package="MsBackendSchema"))
+  mapping <- loadSpectraMapping(system.file("mapping/mgf-mapping.yaml", package="SpectraMapping"))
   return(spectraMapping(mapping))
 }
 

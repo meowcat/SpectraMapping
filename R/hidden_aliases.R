@@ -10,7 +10,7 @@ NULL
 
 #' @title Internal page for hidden aliases
 #'
-#' @aliases [,MsBackendSchema-method
+#' @aliases [,MsBackendMapping-method
 #'
 #' @description
 #'

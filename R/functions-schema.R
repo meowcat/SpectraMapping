@@ -1,4 +1,4 @@
-##' @param f `character(1)` with the path to an schema file.
+##' @param f `character(1)` with the path to an Mapping file.
 ##' 
 ##' @param msLevel `numeric(1)` with the MS level. Default is 2.
 ##' 
@@ -11,7 +11,7 @@
 ##' @author Michael Stravs
 ##' 
 ##' @noRd
-.read_schema <- function(o, f, ...) {
+.read_mapping <- function(o, f, ...) {
     if (length(f) != 1L)
         stop("Please provide a single file.")
     
@@ -71,7 +71,7 @@
 
 
 .load_default_fields <- function() {
-    fields <- yaml.load_file(system.file("mapping/fields.yaml", package="MsBackendSchema"))
+    fields <- yaml.load_file(system.file("mapping/fields.yaml", package="SpectraMapping"))
     return(bind_rows(fields))
 }
 

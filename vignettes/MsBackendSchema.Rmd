@@ -1,10 +1,10 @@
 ---
-title: "Description and usage of MsBackendSchema"
+title: "Description and usage of SpectraMapping"
 output:
     BiocStyle::html_document:
         toc_float: true
 vignette: >
-    %\VignetteIndexEntry{Description and usage of MsBackendSchema}
+    %\VignetteIndexEntry{Description and usage of SpectraMapping}
     %\VignetteEngine{knitr::rmarkdown}
     %\VignetteEncoding{UTF-8}
     %\VignettePackage{Spectra}
@@ -15,9 +15,9 @@ vignette: >
 BiocStyle::markdown()
 ```
 
-**Package**: `r Biocpkg("MsBackendSchema")`<br />
-**Authors**: `r packageDescription("MsBackendSchema")[["Author"]] `<br />
-**Last modified:** `r file.info("MsBackendSchema.Rmd")$mtime`<br />
+**Package**: `r Biocpkg("SpectraMapping")`<br />
+**Authors**: `r packageDescription("SpectraMapping")[["Author"]] `<br />
+**Last modified:** `r file.info("SpectraMapping")$mtime`<br />
 **Compiled**: `r date()`
 
 ```{r, echo = FALSE, message = FALSE}
@@ -30,35 +30,39 @@ library(BiocStyle)
 The `Spectra` package provides a central infrastructure for the
 handling of Mass Spectrometry (MS) data. The package supports
 interchangeable use of different *backends* to import MS data from a
-variety of sources (such as mzML files). The `MsBackendSchema` package
-allows the import of MS/MS data from Schema ([Mascot Generic
-Format](http://www.matrixscience.com/help/data_file_help.html))
-files. This vignette illustrates the usage of the `MsBackendSchema`
+variety of sources (such as mzML files). The `SpectraMapping` package
+allows the import and mapping of MS/MS data from and to different formats.
+This vignette illustrates the usage of the `SpectraMapping`
 package.
 
-# Importing MS/MS data from Schema files
+# Importing MS/MS data from files
 
-Schema files store one to multiple spectra, typically centroided and of
-MS level 2. In our short example below, we load 2 Schema files which are
+Files store one to multiple spectra, typically centroided and of
+MS level 2. In our short example below, we load a file which is
 provided with this package. Below we first load all required packages
-and define the paths to the Schema files.
+and define the paths to the files.
 
 ```{r load-libs}
 library(Spectra)
-library(MsBackendSchema)
+library(SpectraMapping)
+library(furrr)
+library(devtools)
 
-fls <- dir(system.file("extdata", package = "MsBackendSchema"),
-           full.names = TRUE, pattern = "Schema$")
-fls
+
 ```
 
 MS data can be accessed and analyzed through `Spectra` objects. Below
-we create a `Spectra` with the data from these Schema files. To this end
-we provide the file names and specify to use a `MsBackendSchema()`
+we create a `Spectra` with the data from these files. To this end
+we provide the file names and specify to use a `MsBackendMapping()`
 backend as *source* to enable data import.
 
 ```{r import}
-sps <- Spectra(fls, source = MsBackendSchema())
+
+plan(multiprocess)
+sp <- Spectra(
+  system.file("test_spectra/sample.mgf", package="SpectraMapping"),
+  source = MsBackendMapping(format = MsFormatMgf(parallel=TRUE)))
+
 ```
 
 With that we have now full access to all imported spectra variables
@@ -66,35 +70,26 @@ that we list below.
 
 
 ```{r spectravars}
-spectraVariables(sps)
+spectraVariables(sp)
 ```
 
 Besides default spectra variables, such as `msLevel`, `rtime`,
 `precursorMz`, we also have additional spectra variables such as the
-`title` of each spectrum in the Schema file.
+`title` of each spectrum in the file.
 
 ```{r instrument}
-sps$rtime
-sps$title
+sp$rtime
+sp$title
 ```
 
 In addition we can also access the m/z and intensity values of each
 spectrum.
 
 ```{r mz}
-mz(sps)
-intensity(sps)
+mz(sp)
+intensity(sp)
 ```
 
-When importing a large number of Schema files, setting `nonStop = TRUE`
-prevents the call to stop whenever problematic Schema files are
-encountered. 
-
-```{r all-import, eval = FALSE}
-sps <- Spectra(fls, source = MsBackendSchema(), nonStop = TRUE)
-```
-
-# Session information
 
 ```{r}
 sessionInfo()
