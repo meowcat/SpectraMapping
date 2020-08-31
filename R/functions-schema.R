@@ -66,7 +66,7 @@
 
 .subset_peaks <- function(o) {
     o@peaks %>%
-        filter(spectrum_id %in% o@spectraData$spectrumId)
+        filter(spectrum_id %in% o@spectraData$spectrum_id)
 }
 
 

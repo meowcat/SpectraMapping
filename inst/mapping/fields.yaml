@@ -16,3 +16,6 @@
 -
   spectraKey: polarity
   dataType: integer
+-
+  spectraKey: collisionEnergy
+  dataType: numeric

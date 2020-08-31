@@ -37,7 +37,7 @@ Collate:
     'format-utils.R'
     'functions-schema.R'
     'mgf-format.R'
+    'parser-utils.R'
     'mgf-parser.R'
     'msp-format.R'
     'msp-parser.R'
-    'parser-utils.R'

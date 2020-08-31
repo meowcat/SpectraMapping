@@ -70,7 +70,7 @@
     if(!parallel)
       return(data_ %>% map(spectrum) %>% map("result"))
     else
-      return(data_ %>% future_map(spectrum) %>% map("result"))
+      return(data_ %>% future_map(spectrum, .progress = TRUE) %>% map("result"))
   }
   return(document)
 }

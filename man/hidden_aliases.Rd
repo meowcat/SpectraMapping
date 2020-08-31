@@ -4,12 +4,15 @@
 \name{hidden_aliases}
 \alias{hidden_aliases}
 \alias{[,MsBackendMapping-method}
+\alias{as.list.MsBackendMapping}
 \alias{as.list,MsBackendMapping-method}
 \alias{intensity,MsBackendMapping-method}
 \alias{mz,MsBackendMapping-method}
 \alias{lengths,MsBackendMapping-method}
 \title{Internal page for hidden aliases}
 \usage{
+\method{as.list}{MsBackendMapping}(x)
+
 \S4method{as.list}{MsBackendMapping}(x)
 
 \S4method{intensity}{MsBackendMapping}(object)

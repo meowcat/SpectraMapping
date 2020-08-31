@@ -1,8 +1,8 @@
 
 #' @export
-MsFormatMgf <- function(parallel = FALSE) {
+MsFormatMgf <- function(parallel = FALSE, progress=FALSE) {
   format <- list(
-    reader = .mgf_reader(parallel = parallel),
+    reader = .mgf_reader(parallel = parallel, progress=progress),
     mapping = .mgf_mapping(),
     writer = function(...) error("not implemented yet")
   )

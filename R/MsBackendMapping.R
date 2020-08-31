@@ -101,8 +101,8 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
               message("Start data import from ", length(files), " files ... ",
                       appendLF = FALSE)
               res <- .read_mapping(object, files)
-              object@peaks <- map_dfr(res, "ions", .id = "spectrum_id")
-              object@variables <- map_dfr(res, "variables", .id = "spectrum_id")
+              object@peaks <- map_dfr(res, "ions", .id = "spectrum_id") %>% mutate(spectrum_id = as.integer(spectrum_id))
+              object@variables <- map_dfr(res, "variables", .id = "spectrum_id") %>% mutate(spectrum_id = as.integer(spectrum_id))
               message("done")
               object <- .fill_variables(object)
               object$dataStorage <- "<memory>"
@@ -114,14 +114,17 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
 
 
 #' @rdname hidden_aliases
-setMethod("as.list", "MsBackendMapping", function(x) {
+as.list.MsBackendMapping <- function(x) {
   if (!length(x))
     return(list())
   .subset_peaks(x) %>%
     group_by(spectrum_id) %>% 
     group_split() %>%
     map(~ as.matrix(.x[,c("mz", "int")]))
-})
+}
+
+#' @rdname hidden_aliases
+setMethod("as.list", "MsBackendMapping", as.list.MsBackendMapping)
 
 #' @rdname hidden_aliases
 setMethod("intensity", "MsBackendMapping", function(object) {
@@ -130,7 +133,8 @@ setMethod("intensity", "MsBackendMapping", function(object) {
 
 #' @rdname hidden_aliases
 setMethod("mz", "MsBackendMapping", function(object) {
-  NumericList(lapply(as.list(object), "[", , 1), compress = FALSE)
+  ol <- as.list(object)
+  NumericList(lapply(ol, "[", , 1), compress = FALSE)
 })
 
 setMethod("ionCount", "MsBackendMapping", function(object) {
