@@ -1,10 +1,10 @@
 ---
-title: "Description and usage of MsBackendMgf"
+title: "Description and usage of MsBackendSchema"
 output:
     BiocStyle::html_document:
         toc_float: true
 vignette: >
-    %\VignetteIndexEntry{Description and usage of MsBackendMgf}
+    %\VignetteIndexEntry{Description and usage of MsBackendSchema}
     %\VignetteEngine{knitr::rmarkdown}
     %\VignetteEncoding{UTF-8}
     %\VignettePackage{Spectra}
@@ -15,9 +15,9 @@ vignette: >
 BiocStyle::markdown()
 ```
 
-**Package**: `r Biocpkg("MsBackendMgf")`<br />
-**Authors**: `r packageDescription("MsBackendMgf")[["Author"]] `<br />
-**Last modified:** `r file.info("MsBackendMgf.Rmd")$mtime`<br />
+**Package**: `r Biocpkg("MsBackendSchema")`<br />
+**Authors**: `r packageDescription("MsBackendSchema")[["Author"]] `<br />
+**Last modified:** `r file.info("MsBackendSchema.Rmd")$mtime`<br />
 **Compiled**: `r date()`
 
 ```{r, echo = FALSE, message = FALSE}
@@ -30,35 +30,35 @@ library(BiocStyle)
 The `Spectra` package provides a central infrastructure for the
 handling of Mass Spectrometry (MS) data. The package supports
 interchangeable use of different *backends* to import MS data from a
-variety of sources (such as mzML files). The `MsBackendMgf` package
-allows the import of MS/MS data from mgf ([Mascot Generic
+variety of sources (such as mzML files). The `MsBackendSchema` package
+allows the import of MS/MS data from Schema ([Mascot Generic
 Format](http://www.matrixscience.com/help/data_file_help.html))
-files. This vignette illustrates the usage of the `MsBackendMgf`
+files. This vignette illustrates the usage of the `MsBackendSchema`
 package.
 
-# Importing MS/MS data from mgf files
+# Importing MS/MS data from Schema files
 
-Mgf files store one to multiple spectra, typically centroided and of
-MS level 2. In our short example below, we load 2 mgf files which are
+Schema files store one to multiple spectra, typically centroided and of
+MS level 2. In our short example below, we load 2 Schema files which are
 provided with this package. Below we first load all required packages
-and define the paths to the mgf files.
+and define the paths to the Schema files.
 
 ```{r load-libs}
 library(Spectra)
-library(MsBackendMgf)
+library(MsBackendSchema)
 
-fls <- dir(system.file("extdata", package = "MsBackendMgf"),
-           full.names = TRUE, pattern = "mgf$")
+fls <- dir(system.file("extdata", package = "MsBackendSchema"),
+           full.names = TRUE, pattern = "Schema$")
 fls
 ```
 
 MS data can be accessed and analyzed through `Spectra` objects. Below
-we create a `Spectra` with the data from these mgf files. To this end
-we provide the file names and specify to use a `MsBackendMgf()`
+we create a `Spectra` with the data from these Schema files. To this end
+we provide the file names and specify to use a `MsBackendSchema()`
 backend as *source* to enable data import.
 
 ```{r import}
-sps <- Spectra(fls, source = MsBackendMgf())
+sps <- Spectra(fls, source = MsBackendSchema())
 ```
 
 With that we have now full access to all imported spectra variables
@@ -71,7 +71,7 @@ spectraVariables(sps)
 
 Besides default spectra variables, such as `msLevel`, `rtime`,
 `precursorMz`, we also have additional spectra variables such as the
-`title` of each spectrum in the mgf file.
+`title` of each spectrum in the Schema file.
 
 ```{r instrument}
 sps$rtime
@@ -86,12 +86,12 @@ mz(sps)
 intensity(sps)
 ```
 
-When importing a large number of mgf files, setting `nonStop = TRUE`
-prevents the call to stop whenever problematic mgf files are
+When importing a large number of Schema files, setting `nonStop = TRUE`
+prevents the call to stop whenever problematic Schema files are
 encountered. 
 
 ```{r all-import, eval = FALSE}
-sps <- Spectra(fls, source = MsBackendMgf(), nonStop = TRUE)
+sps <- Spectra(fls, source = MsBackendSchema(), nonStop = TRUE)
 ```
 
 # Session information

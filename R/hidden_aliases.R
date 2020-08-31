@@ -1,3 +1,13 @@
+#' @import tibble
+#' @import purrr
+#' @import dplyr
+#' @import furrr
+#' @import magrittr
+#' @import readr
+#' @import stringr
+#' @import tidyr
+NULL
+
 #' @title Internal page for hidden aliases
 #'
 #' @aliases [,MsBackendSchema-method

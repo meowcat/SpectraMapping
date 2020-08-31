@@ -1,3 +1,8 @@
+#' @import Ramble
+#' @import furrr
+#' @import tidyverse
+NULL
+
 # https://gist.github.com/mmaechler/9cfc3219c4b89649313bfe6853d87894
 ##' warnifnot(): a "only-warning" version of stopifnot():
 ##'   {Yes, learn how to use do.call(substitute, ...) in a powerful manner !!}

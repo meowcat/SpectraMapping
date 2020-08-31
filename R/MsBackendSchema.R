@@ -1,6 +1,6 @@
-library(Spectra)
-library(tidyverse)
 #' @include hidden_aliases.R
+#' @import tidyverse
+#' @import tibble
 NULL
 
 #' @title MS data backend for Schema files
@@ -75,10 +75,12 @@ setClass("MsBackendSchema",
          contains = "MsBackendDataFrame",
          slots = c(format = "MsFormat",
                    variables = "data.frame",
-                   peaks = "data.frame"
+                   peaks = "data.frame",
+                   fields = "data.frame"
                    ),
          prototype = prototype(spectraData = DataFrame(),
                                format = dummyFormat,
+                               fields = tibble(),
                                variables = tibble(),
                                peaks = tibble(),
                                readonly = FALSE,
@@ -120,14 +122,7 @@ setMethod("backendInitialize", signature = "MsBackendSchema",
               object$centroided <- TRUE
               return(object)
               
-              res <- do.call(rbind, res)
-              if (nonStop && length(files) > nrow(res))
-                      warning("Import failed for ", length(files) - nrow(res),
-                              " files")
-              asDataFrame(object) <- res
-
-              validObject(object)
-              object
+            
           })
 
 
@@ -168,6 +163,6 @@ setMethod("lengths", "MsBackendSchema", function(x, use.names = FALSE) {
 #' @importFrom methods new
 #'
 #' @export MsBackendSchema
-MsBackendSchema <- function(format) {
-    new("MsBackendSchema", format = format)
+MsBackendSchema <- function(format, fields = .load_default_fields()) {
+    new("MsBackendSchema", format = format, fields = fields)
 }

@@ -1,0 +1,18 @@
+-
+  spectraKey: rtime
+  dataType: numeric
+-
+  spectraKey: scanIndex
+  dataType: integer
+-
+  spectraKey: precursorMz
+  dataType: numeric
+-
+  spectraKey: precursorCharge
+  dataType: integer
+-
+  spectraKey: msLevel
+  dataType: integer
+-
+  spectraKey: polarity
+  dataType: integer
