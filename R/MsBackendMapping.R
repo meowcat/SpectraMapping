@@ -156,7 +156,7 @@ setReplaceMethod("asDataFrame", "MsBackendMapping", function(object, value) {
     value[,"spectrum_id"] <- seq_len(nrow(value))
   
   df_ <- value[, !(colnames(value) %in% c("mz", "intensity"))]
-  
+
   object@spectraData <- df_
   object <- .fill_backend(object)
   if(all(c("mz", "intensity") %in% colnames(value))) {

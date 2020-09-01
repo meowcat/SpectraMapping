@@ -87,8 +87,10 @@
 
 .fill_backend <- function(o) {
     vars_map <- o@format$mapping %>% 
-        filter(type=="write")
+        filter(type == "write")
     dict_map <- o@format$dictionary %>% 
+        filter(type == "write")
+    regex_map <- o@format$regex %>% 
         filter(type == "write")
     
     # Translate keys and pivot long
@@ -100,16 +102,17 @@
         inner_join(vars_map, by=c("spectraKey")) %>%
         select(spectrum_id, formatKey, value)
     
-    # Translate regex: todo
-    
     # Translate verbatim values
     vars_dict <- vars_format %>%
         inner_join(dict_map, by=c("formatKey", "value")) %>%
         select(spectrum_id, formatKey, format) %>%
         rename(value=format)
-    vars_nodict <- o@variables %>%
+    vars_nodict <- vars_format %>%
         anti_join(dict_map, by="formatKey")
     vars_all <- bind_rows(list(vars_dict, vars_nodict))
+    
+    # Translate regex
+    vars_all <- .apply_all_regex(regex_map, vars_all)
     
     o@variables <- vars_all
     o

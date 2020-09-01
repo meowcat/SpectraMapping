@@ -3,11 +3,10 @@
 -
   spectraKey: msLevel
   formatKey: Spectrum_type
-  # formatWriteKey: MSLEVEL
-  # formatReadKey:  [MSLEVEL]
-  default: 2
-  # defaultRead:
-  # defaultWrite:
+  regexRead:
+    - {match: 'MS([0-9])', sub: '\1'}
+  regexWrite:
+    - {match: '(.*)', sub: 'MS\1'}
 -
   spectraKey: rtime
 -

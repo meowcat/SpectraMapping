@@ -17,7 +17,6 @@ system.time(
 )
 
 
-
 spMgfTarget <- spMgf
 spMspTarget <- spMsp
 # MSP to MSP
@@ -35,12 +34,6 @@ asDataFrame(spMspTarget@backend) <- asDataFrame(spMgf@backend)
 plain <- spMspTarget@backend@format$writer(spMspTarget@backend)
 write_lines(plain, "mgf_to_msp.msp")
 
-
-
-asDataFrame(sp3@backend) <- asDataFrame(sp2@backend)
-plain <- sp3@backend@format$writer(sp3@backend)
-
-write_lines(plain, "out.mgf")
 
 
 massbank <- r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\MASSBANK.mgf)"
