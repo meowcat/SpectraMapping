@@ -1,6 +1,7 @@
 -
   spectraKey: rtime
   dataType: numeric
+  ontologyKey: ["MS:1000894", "MSIO_0000190"]
 -
   spectraKey: scanIndex
   dataType: integer
@@ -13,6 +14,7 @@
 -
   spectraKey: msLevel
   dataType: integer
+  ontologyKey: ["MS:1000511"]
 -
   spectraKey: polarity
   dataType: integer

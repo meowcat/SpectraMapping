@@ -2,7 +2,7 @@
 library(furrr)
 library(devtools)
 library(SpectraMapping)
-plan(multiprocess)
+#plan(multiprocess)
 system.time(
   sp1 <- Spectra(
     system.file("test_spectra/sample.mgf", package="SpectraMapping"),
@@ -13,6 +13,14 @@ system.time(
     system.file("test_spectra/sample.msp", package="SpectraMapping"),
     source = MsBackendMapping(format = MsFormatMsp(parallel=FALSE)))
 )
+
+
+
+sp3 <- sp1
+asDataFrame(sp3@backend) <- asDataFrame(sp2@backend)
+plain <- sp3@backend@format$writer(sp3@backend)
+library(readr)
+write_lines(plain, "out.mgf")
 
 
 massbank <- r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\MASSBANK.mgf)"

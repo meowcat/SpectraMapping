@@ -3,12 +3,13 @@
 -
   spectraKey: msLevel
   formatKey: Spectrum_type
-  #formatWriteKey: MSLEVEL
-  #formatReadKey:  [MSLEVEL]
-  ontologyKey: ["MS:1000511"]
+  # formatWriteKey: MSLEVEL
+  # formatReadKey:  [MSLEVEL]
+  default: 2
+  # defaultRead:
+  # defaultWrite:
 -
   spectraKey: rtime
-  ontologyKey: ["MS:1000894", "MSIO_0000190"]
 -
   spectraKey: acquisitionNum
 -
@@ -31,8 +32,17 @@
 -
   spectraKey: polarity
   formatKey: Ion_mode
+  dictionary: 
+    - {value: "0", read: ["P", "positive", "+"], write: "P"}
+    - {value: "1", read: ["N", "negative", "-"], write: "N"}
+    # - [value: 0, format: "P"] for read/write
+  # dictionaryRead: ["P": 1, "N": 0]
 -
   spectraKey: dataOrigin
+  formatKey: asd
+  dictionary: 
+    - {value: "0", read: ["P", "positive", "+"], write: "P"}
+    - {value: "1", format: "d"}
 -
   spectraKey: instrumentType
   formatKey: Instrument_type

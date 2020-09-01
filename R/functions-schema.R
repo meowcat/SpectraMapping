@@ -40,6 +40,30 @@
     o
 }
 
+.fill_backend <- function(o) {
+    vars_ <- o@format$mapping %>% 
+        filter(type=="write")
+        
+    
+    data <- as_tibble(o@spectraData) %>%
+        mutate(across(-spectrum_id, as.character)) %>%
+        pivot_longer(-spectrum_id, names_to = "spectraKey", values_to = "value",
+                     values_ptypes = list(value = character()))
+    o@variables <- data %>%
+        inner_join(vars_, by=c("spectraKey")) %>%
+        select(spectrum_id, key=formatKey, value)
+    o
+}
+
+.fill_peaks <- function(o, peaks) {
+    o@peaks <- peaks %>% 
+        as_tibble() %>% 
+        unnest(c(mz, intensity)) %>% 
+        rename(int=intensity) %>%
+        mutate(annotation = NA)
+    o
+}
+
 
 #' Transform variable types according to field definition
 #'

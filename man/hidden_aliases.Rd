@@ -9,6 +9,8 @@
 \alias{intensity,MsBackendMapping-method}
 \alias{mz,MsBackendMapping-method}
 \alias{lengths,MsBackendMapping-method}
+\alias{asDataFrame<-,MsBackendMapping-method}
+\alias{asDataFrame,MsBackendMapping-method}
 \title{Internal page for hidden aliases}
 \usage{
 \method{as.list}{MsBackendMapping}(x)
@@ -20,6 +22,10 @@
 \S4method{mz}{MsBackendMapping}(object)
 
 \S4method{lengths}{MsBackendMapping}(x, use.names = FALSE)
+
+\S4method{asDataFrame}{MsBackendMapping}(object) <- value
+
+\S4method{asDataFrame}{MsBackendMapping}(object, columns = spectraVariables(object))
 }
 \description{
 For S4 methods that require a documentation entry but only clutter the index.

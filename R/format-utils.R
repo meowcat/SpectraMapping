@@ -41,6 +41,30 @@ spectraMapping <- function(mapping) {
   rbind(mapping_read_, mapping_write_)
 }
 
+
+spectraDictionary <- function(mapping) {
+  mapping_ <- mapping %>% 
+    keep(~ !is.null(.x$formatKey)) %>%
+    set_names(map_chr(., "formatKey"))
+  mapping_ <- mapping_ %>%
+    keep(~ !is.null(.x$dictionary)) %>%
+    map("dictionary")
+  mapping_ <- mapping_ %>%
+    map_depth(2, function(x) {
+      if(!is.null(x$format)) {
+        x$write <- x$format
+        x$read <- x$format
+      }
+      return(tribble(
+        ~ value, ~ type, ~ format,
+        x$value, "read", x$read,
+        x$value, "write", x$write
+      )) %>% unnest(format)
+    }) %>%
+    map_dfr(bind_rows, .id="formatKey")
+  mapping_
+}
+
 loadSpectraMapping <- function(f) {
   y <- yaml.load_file(f)
   class(y) <- c(class(y), "MsFormatMapping")

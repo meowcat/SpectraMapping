@@ -24,7 +24,7 @@
       ungroup() %>% 
       rename(peaks=data)
     data <- left_join(variables, peaks) 
-    file <- data %>% select(-spectrum_id) %>% pmap(.write_mgf_spectrum)
+    file <- data %>% select(-spectrum_id) %>% pmap_chr(.write_mgf_spectrum)
     return(file)
   }
   

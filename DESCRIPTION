@@ -39,5 +39,6 @@ Collate:
     'mgf-format.R'
     'parser-utils.R'
     'mgf-parser.R'
+    'mgf-writer.R'
     'msp-format.R'
     'msp-parser.R'

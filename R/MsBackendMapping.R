@@ -149,6 +149,22 @@ setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
 })
 
 
+#' @rdname hidden_aliases
+setReplaceMethod("asDataFrame", "MsBackendMapping", function(object, value) {
+  
+  if("spectrum_id" %in% colnames(value))
+    value[,"spectrum_id"] <- seq_len(nrow(value))
+  
+  df_ <- value[, !(colnames(value) %in% c("mz", "intensity"))]
+  
+  object@spectraData <- df_
+  object <- .fill_backend(object)
+  if(all(c("mz", "intensity") %in% colnames(value))) {
+    object <- .fill_peaks(object, value[,c("spectrum_id", "mz", "intensity")])
+  }
+  return(object)
+})
+  
 
 #' @rdname hidden_aliases
 #'
