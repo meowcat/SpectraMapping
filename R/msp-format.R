@@ -6,7 +6,8 @@ MsFormatMsp <- function(parallel = FALSE, progress = FALSE) {
     reader = .msp_reader(parallel = parallel, progress = progress),
     writer = function(...) error("not implemented yet"),
     mapping = spectraMapping(mapping),
-    dictionary = spectraDictionary(mapping)
+    dictionary = spectraDictionary(mapping),
+    regex = spectraRegex(mapping)
   )
   class(format) <- c("MsFormat", class(format))
   format

@@ -26,19 +26,23 @@
 -
   spectraKey: precursorCharge
   formatKey: Charge
+  regexRead:
+    - {match: '([0-9])\+', sub: '\1'}
+    - {match: '([0-9])-', sub: '-\1'}
 -
   spectraKey: collisionEnergy
   formatKey: Collision_energy
   regexRead: 
-    - {match: '([0-9]+)?', sub: '\\1'}
+    - {match: '([0-9]+)%', sub: '\1'}
+    - {match: 'NCE ([0-9])+', sub: '\1'}
   regexWrite:
     - {match: '.*', sub: '\\0%'}
 -
   spectraKey: polarity
   formatKey: Ion_mode
   dictionary: 
-    - {value: "0", read: ["P", "positive", "+"], write: "P"}
-    - {value: "1", read: ["N", "negative", "-"], write: "N"}
+    - {value: "1", read: ["P", "positive", "+"], write: "P"}
+    - {value: "0", read: ["N", "negative", "-"], write: "N"}
     # - [value: 0, format: "P"] for read/write
   # dictionaryRead: ["P": 1, "N": 0]
 -

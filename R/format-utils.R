@@ -43,12 +43,18 @@ spectraMapping <- function(mapping) {
 
 
 spectraDictionary <- function(mapping) {
+  # Find mappings that are defined for this format
   mapping_ <- mapping %>% 
     keep(~ !is.null(.x$formatKey)) %>%
     set_names(map_chr(., "formatKey"))
+  
+  # Find and extract mappings that have a dictionary
   mapping_ <- mapping_ %>%
     keep(~ !is.null(.x$dictionary)) %>%
     map("dictionary")
+  
+  # Copy format to write/read if specified,
+  # then make into a tibble [formatKey, value, type, format].
   mapping_ <- mapping_ %>%
     map_depth(2, function(x) {
       if(!is.null(x$format)) {
@@ -65,6 +71,40 @@ spectraDictionary <- function(mapping) {
   if(nrow(mapping_) == 0)
     mapping_ <- tibble(formatKey = character(), value=character(), type=character(), format=character())
   mapping_
+}
+
+
+spectraRegex <- function(mapping, type = NULL) {
+  # Collect read, write or both regex types
+  if(is.null(type))
+    return(bind_rows(list(
+      spectraRegex(mapping, "read"),
+      spectraRegex(mapping, "write")
+    )))
+  if(type=="read")
+    filterFind <- "regexRead"
+  else if(type=="write")
+    filterFind <- "regexWrite"
+  else
+    stop("unknown regex type")
+  
+  # Find mapping entries that are defined for this format
+  mapping_ <- mapping %>% 
+    keep(~ !is.null(.x$formatKey)) %>%
+    set_names(map_chr(., "formatKey"))
+  
+  # Find and extract mapping entries that have defined regex
+  mapping_ <- mapping_ %>% 
+    keep(~ !is.null(.x[[filterFind]])) %>%
+    map(~ .x[[filterFind]])
+  
+  mapping_ <- mapping_ %>%
+    map(bind_rows) %>% map_dfr(~ .x %>% mutate(type = type), .id="formatKey")
+  
+  if(nrow(mapping_) == 0)
+    mapping_ <- tibble(formatKey = character(), match=character(), sub=character(), type=character())
+  mapping_
+  
 }
 
 loadSpectraMapping <- function(f) {

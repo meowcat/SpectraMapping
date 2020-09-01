@@ -8,7 +8,8 @@ MsFormatMgf <- function(parallel = FALSE, progress=FALSE) {
     reader = .mgf_reader(parallel = parallel, progress=progress),
     writer = .mgf_writer(),
     mapping = spectraMapping(mapping),
-    dictionary = spectraDictionary(mapping)
+    dictionary = spectraDictionary(mapping),
+    regex = spectraRegex(mapping)
   )
   class(format) <- c("MsFormat", class(format))
   format

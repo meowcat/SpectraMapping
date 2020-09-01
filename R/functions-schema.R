@@ -26,21 +26,53 @@
     res
 }
 
+
+
+.apply_all_regex <- function(regex_map, vars_) {
+    # Applying a single regex: 
+    # Transform all the values it matches to
+    apply_single_regex <- function(vars_, regex) {
+        str(regex)
+        mutate(vars_,
+               value = if_else(
+                   formatKey == regex$formatKey,
+                   str_replace(value, regex$match, regex$sub),
+                   value
+               ))
+    }
+    # Pass the vars_ through all regex lines
+    vars_ <- regex_map %>%
+        rowwise() %>%
+        group_split() %>%
+        reduce(
+            apply_single_regex,
+            .init = vars_
+        )
+    vars_
+}
+
+
 .fill_variables <- function(o) {
     # load variable and dictionary mappings
     vars_map <- o@format$mapping %>% filter(type=="read")
     dict_map <- o@format$dictionary %>% 
         filter(type == "read")
+    regex_map <- o@format$regex %>% 
+        filter(type == "read")
+
+    vars_all <- o@variables
     
+    # Translate regex    
+    vars_all <- .apply_all_regex(regex_map, vars_all)
+
     # Translate verbatim values
-    vars_dict <- o@variables %>%
+    vars_dict <- vars_all %>%
         rename(format = value) %>%
         inner_join(dict_map, by=c("formatKey", "format")) %>%
         select("spectrum_id", "formatKey", "value")
-    vars_nodict <- o@variables %>%
+    vars_nodict <- vars_all %>%
         anti_join(dict_map, by="formatKey")
     vars_all <- bind_rows(list(vars_dict, vars_nodict))
-    # Translate regex: todo
     
     # Translate keys and pivot wide
     vars_table <- vars_all %>% 
