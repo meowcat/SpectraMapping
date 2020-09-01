@@ -33,12 +33,27 @@ system.time(sp3 <- Spectra(
 )
 
 
+massbank <- system.file("test_spectra/massbank_short.mgf", package="SpectraMapping")
+Rprof("prof.o")
+sp3 <- Spectra(
+  massbank,
+  source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE, progress = TRUE)))
+Rprof(NULL)
+
+
 system.time(
   sp2 <- Spectra(
     system.file("test_spectra/long_spectrum_test.mgf", package="SpectraMapping"),
     source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE)))
 )
 
+
+Rprof("profmsp.o")
+sp_arus <- Spectra(
+  r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\plasma_hcd_pos_rec.msp)",
+  source = MsBackendMapping(format = MsFormatMsp(progress=TRUE))
+)
+Rprof(NULL)
 
 
 rdr <- MsFormatMgf(parallel=FALSE, progress = TRUE)$reader

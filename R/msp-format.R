@@ -1,8 +1,8 @@
 
 #' @export
-MsFormatMsp <- function(parallel = FALSE) {
+MsFormatMsp <- function(parallel = FALSE, progress = FALSE) {
   format <- list(
-    reader = .msp_reader(parallel = parallel),
+    reader = .msp_reader(parallel = parallel, progress = progress),
     mapping = .msp_mapping(),
     writer = function(...) error("not implemented yet")
   )

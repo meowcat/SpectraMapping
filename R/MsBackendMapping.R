@@ -149,6 +149,30 @@ setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
 })
 
 
+
+#' @rdname hidden_aliases
+#'
+#' @importFrom methods as
+#'
+#' @importFrom S4Vectors SimpleList
+#'
+#' @importMethodsFrom S4Vectors lapply
+setMethod("asDataFrame", "MsBackendMapping",
+          function(object, columns = spectraVariables(object)) {
+            df_columns <- intersect(columns,colnames(object@spectraData))
+            res <- object@spectraData[, df_columns, drop = FALSE]
+            if("mz" %in% columns)
+              res$mz <- mz(object)
+            if("intensity" %in% columns)
+              res$intensity <- intensity(object)
+            columns_ <- setdiff(columns, colnames(res))
+            for(col in columns_) {
+              res[, col] <- Spectra:::.get_column(object@spectraData, col)
+            }
+            res[, columns, drop = FALSE]
+          })
+
+
 #' @rdname MsBackendMapping
 #'
 #' @importFrom methods new
