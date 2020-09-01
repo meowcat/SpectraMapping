@@ -27,10 +27,24 @@
 }
 
 .fill_variables <- function(o) {
-    vars_ <- o@format$mapping %>% filter(type=="read")
+    # load variable and dictionary mappings
+    vars_map <- o@format$mapping %>% filter(type=="read")
+    dict_map <- o@format$dictionary %>% 
+        filter(type == "read")
     
-    vars_table <- vars_ %>% 
-        inner_join(o@variables, by = c("formatKey" = "key")) %>%
+    # Translate verbatim values
+    vars_dict <- o@variables %>%
+        rename(format = value) %>%
+        inner_join(dict_map, by=c("formatKey", "format")) %>%
+        select("spectrum_id", "formatKey", "value")
+    vars_nodict <- o@variables %>%
+        anti_join(dict_map, by="formatKey")
+    vars_all <- bind_rows(list(vars_dict, vars_nodict))
+    # Translate regex: todo
+    
+    # Translate keys and pivot wide
+    vars_table <- vars_all %>% 
+        inner_join(vars_map, by = c("formatKey")) %>%
         pivot_wider(id_cols = "spectrum_id",
                     names_from = "spectraKey",
                     values_from = "value") %>%
@@ -41,17 +55,32 @@
 }
 
 .fill_backend <- function(o) {
-    vars_ <- o@format$mapping %>% 
+    vars_map <- o@format$mapping %>% 
         filter(type=="write")
-        
+    dict_map <- o@format$dictionary %>% 
+        filter(type == "write")
     
+    # Translate keys and pivot long
     data <- as_tibble(o@spectraData) %>%
         mutate(across(-spectrum_id, as.character)) %>%
         pivot_longer(-spectrum_id, names_to = "spectraKey", values_to = "value",
                      values_ptypes = list(value = character()))
-    o@variables <- data %>%
-        inner_join(vars_, by=c("spectraKey")) %>%
-        select(spectrum_id, key=formatKey, value)
+    vars_format <- data %>%
+        inner_join(vars_map, by=c("spectraKey")) %>%
+        select(spectrum_id, formatKey, value)
+    
+    # Translate regex: todo
+    
+    # Translate verbatim values
+    vars_dict <- vars_format %>%
+        inner_join(dict_map, by=c("formatKey", "value")) %>%
+        select(spectrum_id, formatKey, format) %>%
+        rename(value=format)
+    vars_nodict <- o@variables %>%
+        anti_join(dict_map, by="formatKey")
+    vars_all <- bind_rows(list(vars_dict, vars_nodict))
+    
+    o@variables <- vars_all
     o
 }
 

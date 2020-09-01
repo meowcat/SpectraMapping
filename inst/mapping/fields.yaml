@@ -1,7 +1,7 @@
 -
   spectraKey: rtime
   dataType: numeric
-  ontologyKey: ["MS:1000894", "MSIO_0000190"]
+  #ontologyKey: ["MS:1000894", "MSIO_0000190"]
 -
   spectraKey: scanIndex
   dataType: integer

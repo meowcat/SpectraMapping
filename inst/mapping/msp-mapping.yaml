@@ -29,6 +29,10 @@
 -
   spectraKey: collisionEnergy
   formatKey: Collision_energy
+  regexRead: 
+    - {match: '([0-9]+)?', sub: '\\1'}
+  regexWrite:
+    - {match: '.*', sub: '\\0%'}
 -
   spectraKey: polarity
   formatKey: Ion_mode
@@ -39,10 +43,6 @@
   # dictionaryRead: ["P": 1, "N": 0]
 -
   spectraKey: dataOrigin
-  formatKey: asd
-  dictionary: 
-    - {value: "0", read: ["P", "positive", "+"], write: "P"}
-    - {value: "1", format: "d"}
 -
   spectraKey: instrumentType
   formatKey: Instrument_type

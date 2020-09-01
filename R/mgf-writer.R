@@ -1,7 +1,7 @@
 
 
 .write_mgf_spectrum <- function(variables, peaks) {
-  var_block <- variables %>% mutate(text = paste0(key, "=", value))
+  var_block <- variables %>% mutate(text = paste0(formatKey, "=", value))
   spec_block <- peaks %>% mutate(text = paste(mz, int, annotation, sep='\t'))
   spectrum <- c("BEGIN IONS",
                 var_block %>% pull(text),

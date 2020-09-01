@@ -15,12 +15,12 @@
   specVariable <- specify(
     query = (specVariable_key %then% fixed_string(": ") %then% specVariable_value %then% newline 
              %using% function(x) {
-               list(key = x[[1]], value = x[[3]])
+               list(formatKey = x[[1]], value = x[[3]])
              }),
     testcases = list("GUGUS: gaga\n", "MS1PRECURSOR: 123123232.1232", "MS1PRECURSOR: 123123232.1232\nleft"),
-    success = list(list(key="GUGUS", value="gaga"),
+    success = list(list(formatKey="GUGUS", value="gaga"),
                    NULL,
-                   list(key="MS1PRECURSOR", value="123123232.1232")),
+                   list(formatKey="MS1PRECURSOR", value="123123232.1232")),
     leftovers = list("", NULL, "left"))
   
   # Ion table entries of type 123.1234 999

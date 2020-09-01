@@ -35,6 +35,9 @@
 -
   spectraKey: polarity
   formatKey: IONMODE
+  dictionary:
+    - {value: "1", read: ["Positive", "POSITIVE", "P"], write: "Positive"}
+    - {value: "0", read: ["Negative", "NEGATIVE", "N"], write: "Negative"}
 -
   spectraKey: dataOrigin
   formatKey: FILENAME
