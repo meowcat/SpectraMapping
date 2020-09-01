@@ -4,7 +4,7 @@ MsFormatMgf <- function(parallel = FALSE, progress=FALSE) {
   format <- list(
     reader = .mgf_reader(parallel = parallel, progress=progress),
     mapping = .mgf_mapping(),
-    writer = function(...) error("not implemented yet")
+    writer = .mgf_writer()
   )
   class(format) <- c("MsFormat", class(format))
   format
