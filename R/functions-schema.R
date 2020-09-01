@@ -32,7 +32,6 @@
     # Applying a single regex: 
     # Transform all the values it matches to
     apply_single_regex <- function(vars_, regex) {
-        str(regex)
         mutate(vars_,
                value = if_else(
                    formatKey == regex$formatKey,

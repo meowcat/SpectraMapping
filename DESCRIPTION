@@ -42,3 +42,4 @@ Collate:
     'mgf-writer.R'
     'msp-format.R'
     'msp-parser.R'
+    'msp-writer.R'

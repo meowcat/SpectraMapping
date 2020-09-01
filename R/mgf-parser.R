@@ -32,7 +32,7 @@ NULL
     query=(
       (float %then% spacing %then% float %then% newline) 
       %using% 
-        function(x) list(mz = x[[1]], int = x[[3]])
+        function(x) list(mz = x[[1]], int = x[[3]], annotation = NA)
     ),
     testcases = c("123.1234\t666\n", "121.2323     222\n"),
     leftovers = c("",""))

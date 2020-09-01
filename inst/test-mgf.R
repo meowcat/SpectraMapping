@@ -1,25 +1,45 @@
 
 library(furrr)
 library(devtools)
-library(SpectraMapping)
+#library(SpectraMapping)
+load_all()
+library(readr)
 #plan(multiprocess)
 system.time(
-  sp1 <- Spectra(
+  spMgf <- Spectra(
     system.file("test_spectra/sample.mgf", package="SpectraMapping"),
     source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE)))
 )
 system.time(
-  sp2 <- Spectra(
+  spMsp <- Spectra(
     system.file("test_spectra/sample.msp", package="SpectraMapping"),
     source = MsBackendMapping(format = MsFormatMsp(parallel=FALSE)))
 )
 
 
 
-sp3 <- sp1
+spMgfTarget <- spMgf
+spMspTarget <- spMsp
+# MSP to MSP
+plain <- spMspTarget@backend@format$writer(spMspTarget@backend)
+write_lines(plain, "msp_to_msp.msp")
+# MGF to MGF
+plain <- spMgfTarget@backend@format$writer(spMgfTarget@backend)
+write_lines(plain, "mgf_to_mgf.msp")
+# MSP to MGF
+asDataFrame(spMgfTarget@backend) <- asDataFrame(spMsp@backend)
+plain <- spMgfTarget@backend@format$writer(spMgfTarget@backend)
+write_lines(plain, "msp_to_mgf.mgf")
+# MGF to MSP
+asDataFrame(spMspTarget@backend) <- asDataFrame(spMgf@backend)
+plain <- spMspTarget@backend@format$writer(spMspTarget@backend)
+write_lines(plain, "mgf_to_msp.msp")
+
+
+
 asDataFrame(sp3@backend) <- asDataFrame(sp2@backend)
 plain <- sp3@backend@format$writer(sp3@backend)
-library(readr)
+
 write_lines(plain, "out.mgf")
 
 

@@ -4,7 +4,7 @@ MsFormatMsp <- function(parallel = FALSE, progress = FALSE) {
   mapping <- .msp_mapping()
   format <- list(
     reader = .msp_reader(parallel = parallel, progress = progress),
-    writer = function(...) error("not implemented yet"),
+    writer = .msp_writer(),
     mapping = spectraMapping(mapping),
     dictionary = spectraDictionary(mapping),
     regex = spectraRegex(mapping)
