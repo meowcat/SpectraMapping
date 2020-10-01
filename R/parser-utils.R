@@ -21,7 +21,24 @@ regex <- function(pattern)
       return(list())
   })
 }
-    
+
+regex_replace <- function(pattern, sub) 
+{
+  return(function(string) {
+    pattern_ <- paste0("^", pattern)
+    res <- str_starts(string, pattern_)
+    if(isTRUE(res)) {
+      pattern_ <- paste0("^", pattern)
+      pos <- str_locate(string, pattern_)[1,]
+      result <- str_sub(string, pos[1], pos[2])
+      result <- str_replace(result, pattern, sub)
+      leftover <- str_sub(string, pos[2] + 1)
+      return(succeed(result)(leftover))
+    }
+    else
+      return(list())
+  })
+}
 
 
 

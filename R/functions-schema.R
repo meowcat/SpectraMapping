@@ -78,7 +78,8 @@
         inner_join(vars_map, by = c("formatKey")) %>%
         pivot_wider(id_cols = "spectrum_id",
                     names_from = "spectraKey",
-                    values_from = "value") %>%
+                    values_from = "value",
+                    values_fn = list) %>%
         arrange(spectrum_id) %>%
         .transform_types(o@fields)
     o@spectraData <- DataFrame(vars_table)
@@ -164,5 +165,7 @@
 
 .transform_function <- list(
  "integer" = as.integer,
- "numeric" = as.numeric
+ "numeric" = as.numeric,
+ "character" = as.character
+ #"CharacterList" = function(x) as(x, "CharacterList")
 )

@@ -20,8 +20,12 @@ system.time(
 spMgfTarget <- spMgf
 spMspTarget <- spMsp
 # MSP to MSP
+
+
+asDataFrame(spMspTarget@backend) <- asDataFrame(spMsp@backend)
 plain <- spMspTarget@backend@format$writer(spMspTarget@backend)
 write_lines(plain, "msp_to_msp.msp")
+
 # MGF to MGF
 plain <- spMgfTarget@backend@format$writer(spMgfTarget@backend)
 write_lines(plain, "mgf_to_mgf.msp")

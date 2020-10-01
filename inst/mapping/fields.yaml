@@ -21,3 +21,9 @@
 -
   spectraKey: collisionEnergy
   dataType: numeric
+-
+  spectraKey: dataOrigin
+  dataType: character
+-
+  spectraKey: title
+  dataType: list

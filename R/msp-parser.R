@@ -3,7 +3,9 @@
   
   # Properties of type XXX=value\n
   ## Key
-  specVariable_key <- delimited_string(":")
+  specVariable_key <- ((regex_replace("Synon: (\\$[0-9][0-9]) ", "\\1") %then% succeed(""))
+                       %alt% 
+                       (delimited_string(":") %then% (fixed_string(": "))))
   ## Value
   specVariable_value <- specify(
     query = delimited_string("\n"),
@@ -13,15 +15,18 @@
   )
   # Property
   specVariable <- specify(
-    query = (specVariable_key %then% fixed_string(": ") %then% specVariable_value %then% newline 
+    query = (specVariable_key %then% specVariable_value %then% newline 
              %using% function(x) {
                list(formatKey = x[[1]], value = x[[3]])
              }),
-    testcases = list("GUGUS: gaga\n", "MS1PRECURSOR: 123123232.1232", "MS1PRECURSOR: 123123232.1232\nleft"),
+    testcases = list("GUGUS: gaga\n", "MS1PRECURSOR: 123123232.1232",
+                     "MS1PRECURSOR: 123123232.1232\nleft",
+                     "Synon: $66 synoncomment\nasdf"),
     success = list(list(formatKey="GUGUS", value="gaga"),
                    NULL,
-                   list(formatKey="MS1PRECURSOR", value="123123232.1232")),
-    leftovers = list("", NULL, "left"))
+                   list(formatKey="MS1PRECURSOR", value="123123232.1232"),
+                   list(formatKey="$66", value="synoncomment")),
+    leftovers = list("", NULL, "left","asdf"))
   
   # Ion table entries of type 123.1234 999
   ion_plain <- specify(

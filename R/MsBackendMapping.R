@@ -73,7 +73,7 @@ setClass("MsBackendMapping",
                                readonly = FALSE,
                                version = "0.1"))
 
-#' @importMethodsFrom Spectra backendInitialize asDataFrame<- $<- $
+#' @importMethodsFrom Spectra backendInitialize spectraData<- $<- $
 #'
 #' @importFrom BiocParallel bpparam
 #'
@@ -114,26 +114,27 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
 
 
 #' @rdname hidden_aliases
-as.list.MsBackendMapping <- function(x) {
-  if (!length(x))
+.peaksData.MsBackendMapping <- function(object) {
+  if (!length(object))
     return(list())
-  .subset_peaks(x) %>%
+  .subset_peaks(object) %>%
     group_by(spectrum_id) %>% 
     group_split() %>%
     map(~ as.matrix(.x[,c("mz", "int")]))
 }
 
 #' @rdname hidden_aliases
-setMethod("as.list", "MsBackendMapping", as.list.MsBackendMapping)
+#' @importMethodsFrom Spectra peaksData
+setMethod("peaksData", "MsBackendMapping", .peaksData.MsBackendMapping)
 
 #' @rdname hidden_aliases
 setMethod("intensity", "MsBackendMapping", function(object) {
-  NumericList(lapply(as.list(object), "[", , 2), compress = FALSE)
+  NumericList(lapply(peaksData(object), "[", , 2), compress = FALSE)
 })
 
 #' @rdname hidden_aliases
 setMethod("mz", "MsBackendMapping", function(object) {
-  ol <- as.list(object)
+  ol <- peaksData(object)
   NumericList(lapply(ol, "[", , 1), compress = FALSE)
 })
 
@@ -150,7 +151,22 @@ setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
 
 
 #' @rdname hidden_aliases
-setReplaceMethod("asDataFrame", "MsBackendMapping", function(object, value) {
+setMethod("export", "MsBackendMapping", function(object, x, file = tempfile()) {
+  
+  d <- spectraData(x)
+  d$mz <- mz(x)
+  d$intensity <- intensity(x)
+  # Conversion of the field happens by assigning to the object,
+  # as it would when we setBackend
+  spectraData(object) <- d
+  #
+  plain <- object@format$writer(object)
+  write_lines(plain, path=file)
+})
+
+
+#' @rdname hidden_aliases
+setReplaceMethod("spectraData", "MsBackendMapping", function(object, value) {
   
   if(!("spectrum_id" %in% colnames(value)))
     value[,"spectrum_id"] <- seq_len(nrow(value))
@@ -176,7 +192,7 @@ setReplaceMethod("asDataFrame", "MsBackendMapping", function(object, value) {
 #' @importFrom S4Vectors SimpleList
 #'
 #' @importMethodsFrom S4Vectors lapply
-setMethod("asDataFrame", "MsBackendMapping",
+setMethod("spectraData", "MsBackendMapping",
           function(object, columns = spectraVariables(object)) {
             df_columns <- intersect(columns,colnames(object@spectraData))
             res <- object@spectraData[, df_columns, drop = FALSE]

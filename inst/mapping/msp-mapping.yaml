@@ -63,7 +63,10 @@
   formatKey: DB#
 -
   spectraKey: title
-  formatKey: Name
+  #formatKey: Name
+  formatKeyRead: [Name, Synon]
+  formatKeyWrite: Name
+  #formatKeyWrite: {'1': Name, '*': Synon}
 -
   spectraKey: principalInvestigator
 -
@@ -77,6 +80,9 @@
 -
   spectraKey: nominalMass
   formatKey: MW
+-
+  spectraKey: peaksCount
+  formatKey: Num Peaks
 
 #  [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"             "dataOrigin"             
 # [7] "centroided"              "smoothed"                "polarity"                "precScanNum"             "precursorMz"             "precursorIntensity"     

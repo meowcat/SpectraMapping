@@ -14,11 +14,13 @@
 .mgf_writer <- function() {
   .mgf_writer_ <- function(backend) {
     variables <- backend@variables %>% 
+      filter(spectrum_id %in% backend@spectraData[,"spectrum_id"]) %>%
       group_by(spectrum_id) %>% 
       nest() %>% 
       ungroup() %>% 
       rename(variables=data)
     peaks <- backend@peaks %>% 
+      filter(spectrum_id %in% backend@spectraData[,"spectrum_id"]) %>%
       group_by(spectrum_id) %>% 
       nest() %>%
       ungroup() %>% 
