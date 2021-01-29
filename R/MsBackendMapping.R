@@ -218,3 +218,15 @@ setMethod("spectraData", "MsBackendMapping",
 MsBackendMapping <- function(format, fields = .load_default_fields()) {
     new("MsBackendMapping", format = format, fields = fields)
 }
+
+
+
+
+#' @importMethodsFrom S4Vectors [
+#'
+#' @importFrom MsCoreUtils i2index
+#'
+#' @rdname hidden_aliases
+setMethod("[", "MsBackendMapping", function(x, i, j, ..., drop = FALSE) {
+  .subset_backend_mapping(x, i)
+})

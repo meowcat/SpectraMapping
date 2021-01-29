@@ -35,7 +35,7 @@ Collate:
     'hidden_aliases.R'
     'MsBackendMapping.R'
     'format-utils.R'
-    'functions-schema.R'
+    'MsBackendMapping-functions.R'
     'mgf-format.R'
     'parser-utils.R'
     'mgf-parser.R'

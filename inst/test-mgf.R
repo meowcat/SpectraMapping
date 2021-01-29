@@ -4,6 +4,7 @@ library(devtools)
 #library(SpectraMapping)
 load_all()
 library(readr)
+library(Spectra)
 #plan(multiprocess)
 system.time(
   spMgf <- Spectra(
@@ -22,7 +23,7 @@ spMspTarget <- spMsp
 # MSP to MSP
 
 
-asDataFrame(spMspTarget@backend) <- asDataFrame(spMsp@backend)
+spectraData(spMspTarget@backend) <- spectraData(spMsp@backend)
 plain <- spMspTarget@backend@format$writer(spMspTarget@backend)
 write_lines(plain, "msp_to_msp.msp")
 
@@ -30,11 +31,11 @@ write_lines(plain, "msp_to_msp.msp")
 plain <- spMgfTarget@backend@format$writer(spMgfTarget@backend)
 write_lines(plain, "mgf_to_mgf.msp")
 # MSP to MGF
-asDataFrame(spMgfTarget@backend) <- asDataFrame(spMsp@backend)
+spectraData(spMgfTarget@backend) <- spectraData(spMsp@backend)
 plain <- spMgfTarget@backend@format$writer(spMgfTarget@backend)
 write_lines(plain, "msp_to_mgf.mgf")
 # MGF to MSP
-asDataFrame(spMspTarget@backend) <- asDataFrame(spMgf@backend)
+spectraData(spMspTarget@backend) <- spectraData(spMgf@backend)
 plain <- spMspTarget@backend@format$writer(spMspTarget@backend)
 write_lines(plain, "mgf_to_msp.msp")
 
@@ -43,10 +44,10 @@ write_lines(plain, "mgf_to_msp.msp")
 massbank <- r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\MASSBANK.mgf)"
 system.time(sp3 <- Spectra(
   massbank,
-  source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE, progress = TRUE)))
+  source = MsBackendMapping(format = MsFormatMgf(parallel=TRUE, progress = TRUE)))
 )
 library(MsBackendMgf)
-system.time(sp3 <- Spectra(
+system.time(sp4 <- Spectra(
   massbank,
   source = MsBackendMgf())
 )
@@ -54,7 +55,7 @@ system.time(sp3 <- Spectra(
 massbank <- r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\MASSBANK.mgf)"
 system.time(sp3 <- Spectra(
   massbank,
-  source = MsBackendMapping(format = MsFormatMgf(parallel=TRUE, progress = TRUE)))
+  source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE, progress = TRUE)))
 )
 
 

@@ -122,10 +122,39 @@
 .fill_peaks <- function(o, peaks) {
     o@peaks <- peaks %>% 
         as_tibble() %>% 
-        unnest(c(mz, intensity)) %>% 
+        tidyr::unchop(c(mz, intensity),
+               ptype = data.frame(
+                   mz = numeric(0),
+                   intensity = numeric(0)
+               )
+               ) %>% 
         rename(int=intensity) %>%
         mutate(annotation = NA)
     o
+}
+
+#' @importMethodsFrom S4Vectors extractROWS
+#'
+#' @importFrom methods slot<-
+#'
+#' @noRd
+.subset_backend_mapping <- function(x, i) {
+    if (missing(i))
+        return(x)
+    i <- MsCoreUtils::i2index(i, length(x), rownames(x@spectraData))
+    
+    # Subset spectraData
+    slot(x, "spectraData", check = FALSE) <- extractROWS(x@spectraData, i)
+    
+    # Additionally subset the true data source
+    x@peaks <- x@peaks %>% filter(spectrum_id %in% x@spectraData$spectrum_id)
+    x@variables <- x@variables %>% filter(spectrum_id %in% x@spectraData$spectrum_id)
+    
+    x
+}
+
+.subset_backend_data_frame <- function(x, i) {
+    
 }
 
 

@@ -1,5 +1,5 @@
 
-.msp_reader <- function(parallel = FALSE, single_spectrum = FALSE, progress=FALSE) {
+.msp_reader_slow <- function(parallel = FALSE, single_spectrum = FALSE, progress=FALSE) {
   
   # Properties of type XXX=value\n
   ## Key
