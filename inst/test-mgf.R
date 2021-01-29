@@ -41,10 +41,10 @@ write_lines(plain, "mgf_to_msp.msp")
 
 
 
-massbank <- r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\MASSBANK.mgf)"
+massbank <- r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\MASSBANK_smaller.mgf)"
 system.time(sp3 <- Spectra(
   massbank,
-  source = MsBackendMapping(format = MsFormatMgf(parallel=TRUE, progress = TRUE)))
+  source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE, progress = TRUE)))
 )
 library(MsBackendMgf)
 system.time(sp4 <- Spectra(

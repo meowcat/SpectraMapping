@@ -28,15 +28,15 @@ NULL
                    list(type = "specVariable", formatKey="MS1PRECURSOR", value="123123232.1232")),
     leftovers = list("", NULL, "left"))
   
-  # Ion table entries of type 123.1234 999
-  ion <- specify(
-    query=(
-      (float %then% spacing %then% float %then% newline) 
-      %using% 
-        function(x) list(type = "ion", mz = x[[1]], int = x[[3]], annotation = NA)
-    ),
-    testcases = c("123.1234\t666\n", "121.2323     222\n"),
-    leftovers = c("",""))
+  # # Ion table entries of type 123.1234 999
+  # ion <- specify(
+  #   query=(
+  #     (float %then% spacing %then% float %then% newline) 
+  #     %using% 
+  #       function(x) list(type = "ion", mz = x[[1]], int = x[[3]], annotation = NA)
+  #   ),
+  #   testcases = c("123.1234\t666\n", "121.2323     222\n"),
+  #   leftovers = c("",""))
   
   # Spectrum: spectrum start delimiter, variable block, ion table, spectrum end delimiter
   ## Spectrum delimiters
@@ -50,9 +50,20 @@ NULL
     spectrum_ <- data %>% begin_marker() %>% extract2("leftover")
     spectrum_ <- spectrum_ %>% str_split("\n") %>% extract2(1) %>% map(~ paste0(.x, "\n"))
     #stopifnot(spectrum_[[1]])
-    data <- spectrum_ %>% map(spectrum_line()) %>% map(`$`, "result") %>% compact()
-    vars <- data %>% keep(~ .x$type == "specVariable") %>% bind_rows() %>% select(-type)
-    ions <- data %>% keep(~ .x$type == "ion") %>% bind_rows() %>% select(-type)
+    spectrum_lines_var <- spectrum_ %>% str_detect(".*?=.*")
+    spectrum_lines_end <- spectrum_ %>% str_detect("^END IONS")
+    vars <- spectrum_[spectrum_lines_var] %>% 
+      map(specVariable) %>% map(`$`, "result") %>% 
+      compact() %>%
+      bind_rows() %>%
+      select(-type)
+    ions <- spectrum_[!spectrum_lines_var & !spectrum_lines_end] %>%
+      paste0(collapse = "\n") %>%
+      read_table2(col_names = c("mz", "int"),
+                  col_types = 'dd')
+    # data <- spectrum_ %>% map(spectrum_line()) %>% map(`$`, "result") %>% compact()
+    # vars <- data %>% keep(~ .x$type == "specVariable") %>% bind_rows() %>% select(-type)
+    # ions <- data %>% keep(~ .x$type == "ion") %>% bind_rows() %>% select(-type)
     list(variables = vars, ions = ions)
   }
   
