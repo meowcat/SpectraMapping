@@ -1,0 +1,35 @@
+# formatKey is the default single entry for formatReadKey and the default for formatWriteKey.
+# If multiple entries should be read into the same key, specify formatReadKey as a list i.e. [] or multiline -
+-
+  spectraKey: title
+  formatKey: CH$NAME
+  #formatWriteKey: MSLEVEL
+  #formatReadKey:  [MSLEVEL]
+  ontologyKey: ["MS:1000511"]
+
+#  [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"             "dataOrigin"             
+# [7] "centroided"              "smoothed"                "polarity"                "precScanNum"             "precursorMz"             "precursorIntensity"     
+# [13] "precursorCharge"         "collisionEnergy"         "isolationWindowLowerMz"  "isolationWindowTargetMz" "isolationWindowUpperMz" 
+
+#' - `"msLevel"`: `integer` with MS levels of the spectra.
+#' - `"rt"`: `numeric` with retention times of the spectra.
+#' - `"acquisitionNum"`: `integer` with the acquisition number of the spectrum.
+#' - `"scanIndex"`: `integer` with the index of the scan/spectrum within the
+#'   *mzML*/*mzXML*/*CDF* file.
+#' - `"dataOrigin"`: `character` defining the *data origin*.
+#' - `"dataStorage"`: `character` indicating grouping of spectra in different
+#'   e.g. input files. Note that missing values are not supported.
+#' - `"centroided"`: `logical` whether the spectrum is centroided.
+#' - `"smoothed"`: `logical` whether the spectrum was smoothed.
+#' - `"polarity"`: `integer` with the polarity information of the spectra.
+#' - `"precScanNum"`: `integer` specifying the index of the (MS1) spectrum
+#'   containing the precursor of a (MS2) spectrum.
+#' - `"precursorMz"`: `numeric` with the m/z value of the precursor.
+#' - `"precursorIntensity"`: `numeric` with the intensity value of the
+#'   precursor.
+#' - `"precursorCharge"`: `integer` with the charge of the precursor.
+#' - `"collisionEnergy"`: `numeric` with the collision energy.
+#' - `"mz"`: [NumericList()] of `numeric` vectors representing the m/z values
+#'   for each spectrum.
+#' - `"intensity"`: [NumericList()] of `numeric` vectors representing the
+#'   intensity values for each spectrum.

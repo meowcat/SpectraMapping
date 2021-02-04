@@ -67,6 +67,12 @@ sp3 <- Spectra(
 Rprof(NULL)
 
 
+f4 <- r"(\\imsb-us-stravsm\stravsm\massbank\MassBank-data\Eawag\EA002454.txt)"
+sp4 <- Spectra(
+  f4,
+  source = MsBackendMapping(format = MsFormatMassbank(parallel=FALSE, progress = TRUE)))
+
+
 system.time(
   sp2 <- Spectra(
     system.file("test_spectra/long_spectrum_test.mgf", package="SpectraMapping"),
