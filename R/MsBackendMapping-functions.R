@@ -50,6 +50,31 @@
     vars_
 }
 
+.apply_all_unnest <- function(nestings, vars_) {
+    apply_single_unnest <- function(vars_, nesting) {
+        # Separate KVS into data which is transformed and data which is kept
+        vars_keep <- vars_ %>% filter(formatKey != nesting$formatKey)
+        vars_act <-  vars_ %>% 
+            filter(formatKey == nesting$formatKey) %>%
+            select(-formatKey)
+        # Transform: first separate if necessary, then extract key/value, then rename with prefix
+        if(!is.null(nesting$separator))
+            vars_act <- vars_act %>% separate_rows(nesting$separator)
+        vars_act <- vars_act %>% 
+            extract("value", regex=nesting$regex, into=c("formatKey", "value"))
+        if(!is.null(nesting$prefix))
+            vars_act <- vars_act %>% mutate(formatKey = paste0(nesting$prefix, formatKey))
+        # Finally, recompose the tibble from kept and newly extracted variables
+        vars <- bind_rows(list(vars_keep, vars_act))
+        return(vars)
+    }
+    # pass the vars through all unnesting actions
+    vars_ <- nestings %>%
+        reduce(apply_single_unnest,
+               .init = vars_)
+    vars_
+}
+
 
 .fill_variables <- function(o) {
     # load variable and dictionary mappings
@@ -58,8 +83,12 @@
         filter(type == "read")
     regex_map <- o@format$regex %>% 
         filter(type == "read")
+    nestings <- o@format$nesting
 
     vars_all <- o@variables
+    
+    # Unnest
+    vars_all <- .apply_all_unnest(nestings, vars_all)
     
     # Translate regex    
     vars_all <- .apply_all_regex(regex_map, vars_all)

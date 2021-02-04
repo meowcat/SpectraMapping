@@ -10,8 +10,12 @@ spectraMapping <- function(mapping) {
     mapping_ <- mapping
   else
     mapping_ <- yaml.load_file(mapping)
+  # This is for the final mapping, so find the ones with a spectraKey
+  mapping_ <- mapping_ %>% 
+      keep(~!is.null(.x$spectraKey))
   # Fill up mapping with formatKey where formatKeyRead / formatKeyWrite are not explicitely set
-  mapping_ <- mapping_ %>% map( function(entry) {
+  mapping_ <- mapping_ %>%
+    map( function(entry) {
     if(is.null(entry$formatKeyRead))
       entry$formatKeyRead <- entry$formatKey
     if(is.null(entry$formatKeyWrite))
@@ -73,6 +77,11 @@ spectraDictionary <- function(mapping) {
   mapping_
 }
 
+spectraNesting <- function(mapping) {
+  nestings <- mapping %>% 
+    keep(~!is.null(.x$nest)) %>%
+    map(~.x$nest %>% list_modify(formatKey = .x$formatKey))
+}
 
 spectraRegex <- function(mapping, type = NULL) {
   # Collect read, write or both regex types

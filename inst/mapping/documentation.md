@@ -15,9 +15,10 @@
 This is the real benefit here. The raw key-value store is processed according to a ruleset specified in a mapping YAML file.
 Processing order is as follows:
 
-* Unnesting: all `nest` statements are processed
+* Unnesting: all `nest` statements are processed. (Note: The `nest` statements do not need to appear in front of the file. It is best to put the `nest` statements in the file position where they should be when writing, unless the export writer does the order by itself.) Note that the unnest statements are processed in the order found in the file. This is relevant if the user desires to multilevel unnest, i.e. an unnested block may be further unnested with another rule.
 * Regexes: `regexRead` statements are processed
 * Dictionaries: `dictionary` statements are processed
+* Splitting/tabling: `split` statements are processed. Note this needs to be *after* regexes and dictionaries because it changes the type of the column! Therefore, after this step no character-based statements can be applied to the `value` column anymore... This is the limit of what this DSL can do.
 * Name mapping: Up to here, all entries were identified by the `formatKey`, which is the property name in the source format.
    As a last step, the `formatKey` is mapped to its `spectraKey` (which is its column name when retrieved with `spectraData`).
    
@@ -36,12 +37,11 @@ Processing order is as follows:
       export()
   ```
  * The same kind of grouping should also be applicable when reading, allowing file name components to end up in specific KVS values.
- * Should this be based on `spectraData` variables or on KVS variables?
+ * Should this be based on `spectraData` variables or on KVS variables? When reading, it is definitely KVS variables, but when writing, the user doesn't know those. Or use dataStorage?
 
 
 # Entry mapping
 This i
-
 
 ## Fields
 The file consists of a list of field translation definitions.
@@ -51,7 +51,9 @@ The file consists of a list of field translation definitions.
 * `formatKeyRead`: One or more variable names in the spectrum file which map to this `spectraKey`. If not set, `formatKey` is used.
 * `formatKeyWrite`: The variable name to write to in the spectrum file/record. If not set, `formatKey` is used.
 * `dictionary`: A verbatim mapping from values in the record to values in the R object.
-  * Contains entries `{value, read, write}` where `read` may have multiple entries mapping to the same R value.
+  * Contains entries `{value, read, write, format}` where `read` may have multiple entries mapping to the same R value.
+  * If `format` is given, this is valid for reading and writing.
+  * Alternatively, if tolerant reading is desired, `read` can specify a list of values, and `write` should specify a single value. Use only `format` or `read, write` in the same entry (but multiple entries in the same dictionary may be mixed).
   * Note: if there is a dictionary, it must be exhaustive. Any spectrum entry that doesn't match a dictionary entry is dropped.
   * Todo: is this good?
 * `regexRead`: A regular expression to apply for reading the record value to an R value.
@@ -61,6 +63,19 @@ The file consists of a list of field translation definitions.
 * `nest`: An order to nest (while writing) or separate (while reading) an entry. 
     This is performed after regexRead when reading, and before regexWrite when writing.
     (Note: this is because `nest` creates further entries. Those have their own regexRead and regexWrite that may apply.)
+    * Contains entries: `prefix`, `separator` (optional), `regexRead`, `write`.
+    * `prefix` is the prefix prepended to newly created rows when unnesting, or conversely, the prefix used to gather rows when nesting.
+      `prefix` is only mandatory if writing is required. If no prefix is given, the values will be kept in their unnested form for writing.
+      TODO/Note: This also means you should typically use `formatKeyRead` when reading from unnested columns - is this true? Probably not. Figure out how this should work!
+    * `separator` is optional; it is used to separate single-line entries into multiline entries (e.g. for MSP Comment: / Notes: fields)
+      when unnesting, or respectively, combining multiline entries to a single line when nesting.
+    * `regexRead` is a regex with two capture groups to get key and value from one entry.
+    * `regexMismatch` describes what to do when the regex doesn't match to an entry. 
+      By default, the entry is kept as is (`keep`), otherwise, may be `drop`ped. TODO: behaviour when writing is still unclear.
+    
+* `split`: An order to interpret an entry as a list. 
+   * If there is a specification for a header, the result will be a data frame.
+   * May this be ragged or not?
   
 ## To do
 

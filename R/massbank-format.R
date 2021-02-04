@@ -9,7 +9,8 @@ MsFormatMassbank <- function(parallel = FALSE, progress=FALSE) {
     #writer = .mgf_writer(),
     mapping = spectraMapping(mapping),
     dictionary = spectraDictionary(mapping),
-    regex = spectraRegex(mapping)
+    regex = spectraRegex(mapping),
+    nesting = spectraNesting(mapping)
   )
   class(format) <- c("MsFormat", class(format))
   format

@@ -1,11 +1,118 @@
 # formatKey is the default single entry for formatReadKey and the default for formatWriteKey.
 # If multiple entries should be read into the same key, specify formatReadKey as a list i.e. [] or multiline -
 -
+  formatKey: AC$CHROMATOGRAPHY
+  nest: { prefix: 'CHROM@', regexRead: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+-
+  formatKey: AC$MASS_SPECTROMETRY
+  nest: { prefix: 'MS@', regexRead: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+-
+  formatKey: CH$LINK
+  nest: { prefix: 'LINK@', regexRead: '(.*?)\s(.*)$', write: "{formatKey} {value}" }  
+-
+  formatKey: MS$FOCUSED_ION
+  #nest: { 'separate_rows': }
+  nest: { prefix: 'ION@', regexRead: '(.*?)\s(.*)$', write: "{formatKey} {value}" }  
+-
   spectraKey: title
-  formatKey: CH$NAME
+  formatKeyRead: [RECORD_TITLE, CH$NAME]
+  #formatKeyWrite: {1: RECORD_TITLE, *: CH$NAME}
   #formatWriteKey: MSLEVEL
   #formatReadKey:  [MSLEVEL]
   ontologyKey: ["MS:1000511"]
+-
+  spectraKey: date
+  formatKey: DATE
+-
+  spectraKey: authors
+  formatKey: AUTHORS
+-
+  spectraKey: license
+  formatKey: LICENSE
+-
+  spectraKey: copyright
+  formatKey: COPYRIGHT
+-
+  spectraKey: comment
+  formatKey: COMMENT
+  split: {separator: ' ', header: [key, value]}
+-
+  spectraKey: compoundClass
+  formatKey: CH$COMPOUND_CLASS
+-
+  spectraKey: formula
+  formatKey: CH$FORMULA
+-
+  spectraKey: exactmass
+  formatKey: CH$EXACT_MASS
+-
+  spectraKey: smiles
+  formatKey: CH$SMILES
+-
+  spectraKey: inchi
+  formatKey: CH$IUPAC
+-
+  spectraKey: cas
+  formatKey: LINK@CAS
+-
+  spectraKey: pubchem
+  formatKey: LINK@PUBCHEM
+-
+  spectraKey: inchikey
+  formatKey: LINK@INCHIKEY
+-
+  spectraKey: instrumentType
+  formatKey: AC$INSTRUMENT_TYPE
+-
+  spectraKey: msLevel
+  formatKey: MS@MS_TYPE
+  regexRead:
+    - {match: 'MS([0-9])', sub: '\1'}
+  regexWrite:
+    - {match: '(.*)', sub: 'MS\1'}
+-
+  spectraKey: polarity
+  formatKey: MS@ION_MODE
+  dictionary: 
+    - {value: "1", format: "POSITIVE"}
+    - {value: "0", format: "NEGATIVE"}
+-
+  spectraKey: ionization
+  formatKey: MS@IONIZATION
+-
+  spectraKey: fragmentationMode
+  formatKey: MS@FRAGMENTATION_MODE
+-
+  spectraKey: collisionEnergy
+  formatKey: MS@COLLISION_ENERGY
+  regexRead: 
+    - {match: '[0-9]+.*', sub: '\1'}
+  regexWrite:
+    - {match: '(.*)', sub: '\1'}
+-
+  spectraKey: solvent
+  formatKey: CHROM@SOLVENT
+-
+  spectraKey: rtime
+  formatKey: CHROM@RETENTION_TIME
+-
+  spectraKey: precursorMz
+  formatKey: ION@PRECURSOR_M/Z
+-
+  spectraKey: adduct
+  formatKey: ION@PRECURSOR_TYPE
+
+#
+#colnames(d)
+# [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"            
+# [6] "dataOrigin"              "centroided"              "smoothed"                "polarity"                "precScanNum"            
+#[11] "precursorMz"             "precursorIntensity"      "precursorCharge"         "collisionEnergy"         "isolationWindowLowerMz" 
+#[16] "isolationWindowTargetMz" "isolationWindowUpperMz"  "spectrum_id"             "spectrum_name"           "date"                   
+#[21] "authors"                 "license"                 "copyright"               "publication"             "splash"                 
+#[26] "compound_id"             "adduct"                  "ionization"              "ionization_voltage"      "fragmentation_mode"     
+#[31] "collision_energy_text"   "instrument"              "instrument_type"         "formula"                 "exactmass"              
+#[36] "smiles"                  "inchi"                   "inchikey"                "cas"                     "pubchem"                
+#[41] "synonym"                 "precursor_mz_text"       "compound_name"          
 
 #  [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"             "dataOrigin"             
 # [7] "centroided"              "smoothed"                "polarity"                "precScanNum"             "precursorMz"             "precursorIntensity"     
