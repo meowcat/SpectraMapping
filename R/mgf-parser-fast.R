@@ -43,9 +43,9 @@ NULL
   begin_marker <- zap_entry((many_iter(newline)) %then% fixed_string("BEGIN IONS\n"))
   end_marker <- zap_entry((fixed_string("END IONS") %then% maybe(newline)))
   ## spectrum
-  spectrum_line <- function(line) {
-    (ion %alt% specVariable %alt% end_marker)
-  }
+  # spectrum_line <- function(line) {
+  #   (ion %alt% specVariable %alt% end_marker)
+  # }
   spectrum <- function(data) {
     spectrum_ <- data %>% begin_marker() %>% extract2("leftover")
     spectrum_ <- spectrum_ %>% str_split("\n") %>% extract2(1) %>% map(~ paste0(.x, "\n"))

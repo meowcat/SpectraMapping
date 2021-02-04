@@ -198,3 +198,5 @@
  "character" = as.character
  #"CharacterList" = function(x) as(x, "CharacterList")
 )
+
+

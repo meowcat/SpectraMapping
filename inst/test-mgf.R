@@ -75,12 +75,44 @@ system.time(
 
 
 Rprof("profmsp.o")
-sp_arus <- Spectra(
-  r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\plasma_hcd_pos_rec.msp)",
-  source = MsBackendMapping(format = MsFormatMsp(progress=TRUE))
+system.time(
+  sp_arus <- Spectra(
+    r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\plasma_hcd_pos_rec.msp)",
+    source = MsBackendMapping(format = MsFormatMsp(progress=TRUE, parallel = FALSE))
+  )
+  # without parallel:
+  # user  system elapsed 
+  # 320.53   10.30  331.50 
+  # with parallel:
+  # user  system elapsed 
+  # 19.58   23.19  154.74 
 )
-Rprof(NULL)
 
+library()
+
+library(MsBackendMsp)
+system.time(
+  sp_arus2 <- Spectra(
+    r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\plasma_hcd_pos_rec.msp)",
+    source = MsBackendMsp())
+  )
+#    user  system elapsed 
+# 710.61   14.55  725.25 
+
+library(profvis)
+profvis({
+  sp_arus2 <- Spectra(
+    r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\plasma_hcd_pos_rec.msp)",
+    source = MsBackendMsp())
+})
+
+profvis({
+  sp_arus <- Spectra(
+    r"(C:\Daten\AnnotationFlow\AnnotationFlow\libraries\plasma_hcd_pos_rec.msp)",
+    source = MsBackendMapping(format = MsFormatMsp(progress=TRUE))
+  )
+})
+  
 
 rdr <- MsFormatMgf(parallel=FALSE, progress = TRUE)$reader
 res <- rdr(read_file(system.file("test_spectra/sample.mgf", package="SpectraMapping")) %>% str_remove_all("\r"))
