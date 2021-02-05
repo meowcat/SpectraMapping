@@ -1,7 +1,22 @@
 #' @import yaml
 #' @import tidyverse
 NULL
+
+
+get_glue <- function() {
+  if(getOption("SpectraMapping")$unsafe_glue)
+    return(glue)
+  else
+    return(glue_safe)
+}
  
+load_mapping <- function(format, mapping) {
+  format$mapping <- spectraMapping(mapping)
+  format$dictionary <- spectraDictionary(mapping)
+  format$regex <- spectraRegex(mapping)
+  format$nesting <- spectraNesting(mapping)
+  return(format)
+}
 
 # Mapping: returns a tibble with columns
 # format_key character, spectra_key character, writable logical
@@ -28,34 +43,56 @@ spectraMapping <- function(mapping) {
   
   mapping_dfr_read <- function(entry, type)
   {
+    if(is.null(entry$order))
+      entry$order <- NA_integer_
     tibble(spectraKey = rep(entry$spectraKey, length(entry$formatKeyRead)),
            formatKey = entry$formatKeyRead,
-           type = rep("read", length(entry$formatKeyRead)))
+           type = rep("read", length(entry$formatKeyRead)),
+           selector = NA,
+           order = rep(entry$order, length(entry$formatKeyRead))
+           )
   }
   mapping_read_ <- map_dfr(mapping_read, mapping_dfr_read)
   
   
   mapping_dfr_write <- function(entry, type)
   {
+    if(is.null(entry$order))
+      entry$order <- NA_integer_
     tibble(spectraKey = rep(entry$spectraKey, length(entry$formatKeyWrite)),
-           formatKey = entry$formatKeyWrite,
-           type = rep("write", length(entry$formatKeyWrite)))
+           formatKey = map_chr(entry$formatKeyWrite, ~.x),
+           type = rep("write", length(entry$formatKeyWrite)),
+           selector = if_else(rep(is.null(names(entry$formatKeyWrite)), length(entry$formatKeyWrite)),
+                              rep(NA_character_, length(entry$formatKeyWrite)),
+                              names(entry$formatKeyWrite)),
+           order = rep(entry$order, length(entry$formatKeyWrite))
+    
+    )
   }
+  # Move NA to the "middle" (i.e. after all front-ordered elements)
+  # and minus-orderd elements to the end, i.e. order is 1,2,4,9, NA, NA, -3, -2, -1
   mapping_write_ <- map_dfr(mapping_write, mapping_dfr_write)
-  rbind(mapping_read_, mapping_write_)
+  rbind(mapping_read_, mapping_write_)  %>%
+    mutate(order = replace_na(order, max(order, na.rm = TRUE) + 1)) %>%
+    mutate(order = if_else(order > 0, order, max(order) - min(order) + order + 1))
 }
 
 
+
 spectraDictionary <- function(mapping) {
+  
+  # Find and extract mappings that have a dictionary
+  mapping_ <- mapping %>%
+    keep(~ !is.null(.x$dictionary))
+  
   # Find mappings that are defined for this format
-  mapping_ <- mapping %>% 
+  mapping_ <- mapping_ %>% 
     keep(~ !is.null(.x$formatKey)) %>%
     set_names(map_chr(., "formatKey"))
   
-  # Find and extract mappings that have a dictionary
   mapping_ <- mapping_ %>%
-    keep(~ !is.null(.x$dictionary)) %>%
     map("dictionary")
+  
   
   # Copy format to write/read if specified,
   # then make into a tibble [formatKey, value, type, format].
@@ -81,6 +118,13 @@ spectraNesting <- function(mapping) {
   nestings <- mapping %>% 
     keep(~!is.null(.x$nest)) %>%
     map(~.x$nest %>% list_modify(formatKey = .x$formatKey))
+}
+
+spectraSplits <- function(mapping) {
+  # Find and extract mappings that have a split entry
+  mapping_ <- mapping %>%
+    keep(~ !is.null(.x$split)) %>%
+    map(~.x$split %>% list_modify(formatKey = .x$formatKey))
 }
 
 spectraRegex <- function(mapping, type = NULL) {

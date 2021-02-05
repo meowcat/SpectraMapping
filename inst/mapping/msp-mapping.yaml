@@ -1,6 +1,9 @@
 # formatKey is the default single entry for formatReadKey and the default for formatWriteKey.
 # If multiple entries should be read into the same key, specify formatReadKey as a list i.e. [] or multiline -
 -
+  formatKey: Comment
+  nest: { prefix: CMT@, separator: ' ', regexRead: '(.*?)=(.*)', write: "{formatKey}={value}"}
+-
   spectraKey: msLevel
   formatKey: Spectrum_type
   regexRead:
@@ -9,6 +12,7 @@
     - {match: '(.*)', sub: 'MS\1'}
 -
   spectraKey: rtime
+  formatKey: CMT@RT
 -
   spectraKey: acquisitionNum
 -
@@ -34,8 +38,8 @@
   regexRead: 
     - {match: '([0-9]+)%', sub: '\1'}
     - {match: 'NCE ([0-9])+', sub: '\1'}
-  regexWrite:
-    - {match: '.*', sub: '\\0%'}
+  write:
+    - "{collisionEnergy} %"
 -
   spectraKey: polarity
   formatKey: Ion_mode
@@ -66,23 +70,26 @@
   #formatKey: Name
   formatKeyRead: [Name, Synon]
   formatKeyWrite: Name
+  order: 1
   #formatKeyWrite: {'1': Name, '*': Synon}
 -
   spectraKey: principalInvestigator
 -
   spectraKey: pubmed
 -
-  spectraKey: precursorAdduct
+  spectraKey: adduct
   formatKey: Precursor_type
 -
   spectraKey: exactMass
   formatKey: ExactMass
+  order: 2
 -
   spectraKey: nominalMass
   formatKey: MW
 -
   spectraKey: peaksCount
   formatKey: Num Peaks
+  order: -1
 
 #  [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"             "dataOrigin"             
 # [7] "centroided"              "smoothed"                "polarity"                "precScanNum"             "precursorMz"             "precursorIntensity"     

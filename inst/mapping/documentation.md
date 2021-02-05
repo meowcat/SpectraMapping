@@ -1,3 +1,23 @@
+# What is `SpectraMapping` good for?
+
+The `Spectra` package provides R with a high-performance infrastructure to handle mass spectra. Importantly, using multiple *backends*, 
+mass spectral data from different sources can be accessed. A `Spectra` object provides infrastructure to handle both the mass spectra and their associated metadata. However, `Spectra` handles mostly the technical aspects, storage and access to metadata, and standardizes only the core aspects (precursor, MS level etc), and provides the freedom to handle any additional metadata (chemical identity, peak annotation, authorship etc) without imposing specific semantics; these are relevant mostly for spectral libraries.
+
+Some prominent text formats used for spectra exchange (MGF, MSP) are simple in principle, and allow key-value annotations. However, the details are not specified and many specific usages exist. Specifically, many implementations bypass perceived limitations e.g. by storing additional key-value pairs in `Comment` fields, specifying ion annotations with `/`-separated lists, etc. Default parsers (`MsBackendMgf`) provide a basic way to map key-value annotations to `Spectra` metadata, allowing some flexibility but not handling advanced parsing. `SpectraMapping` is an attempt to provide a tool to handle interconversion of (mainly) metadata between spectra formats using a format specification. This format specification should be a two-way mapping from one to another "style" of writing metadata to address the many small idiosyncrasies of spectrum file formats. While some specifications are supplied with `SpectraMapping`, the goal is to give the user the power to easily (or at least somewhat easily) adapt a specification if a problem arises.
+
+A key goal of `SpectraMapping` is also facilitating the conversion between formats while transferring metadata accurately.
+
+## What is `SpectraMapping` not?
+
+* It is not fast. E.g. `MsBackendMgf` and `MsBackendMsp` are much faster. For routine handling of datasets where metadata is not crucial, consider using those standard backends.
+* It is not an attempt to unite all formats and create a standard handling of metadata. While some mappings and a field type definition are included, the goal is rather to let the user define mappings and fields such that they fit into their remaining infrastructure, which is often rigid.
+* It also doesn't provide a single way of handling things. For example, it is sometimes useful to handle MassBank tags `CH$LINK: *database* *value*`  with `nesting`, such that they return individual columns (e.g. a column for the InChIKey, a column for the PubChem ID). For other uses, it can be better to handle this with `split`, such that every spectrum has a single `LINK` column containing a table (a `data.frame`) of links.
+* It is not omnipotent and some things cannot be handled perfectly. Specifically, fields that need to be split and merged, or that may have duplicated mappings, are a complicated case. 
+  * For example, in MSP format, `Name` and `Synon` are both fields for names. There may be just one `Name`, and it may be a "record name" rather than a chemical name.
+  * In MassBank format, `CH$NAME[1]` should contain a chemical name; `RECORD_TITLE` should contain a name of the record. So if there is only one MSP `Name`, it should possibly end up in both `CH$NAME` and `RECORD_TITLE`. In this case, reading the MSP should copy the field into two fields, "name" and "title"?  
+* It is, honestly, not particularly good and intuitive to use. The YAML format specification file format has already become quite complex, with regex, splits, nesting etc allowed. Probably it would be better to keep the logic but rework the YAML format to be an invertible top-to-bottom/bottom-to-top workflow.
+
+
 ## Workflow: reading
 
 ### File parsing

@@ -3,7 +3,7 @@
 .write_msp_spectrum <- function(variables, peaks) {
   var_block <- variables %>% 
     # Put "Num Peaks" last:
-    arrange(formatKey == "Num Peaks") %>%
+    arrange(order) %>%
     mutate(text = paste0(formatKey, ": ", value))
   spec_block <- peaks %>% mutate(text = paste(mz, int, annotation, sep='\t'))
   spectrum <- c(var_block %>% pull(text),
@@ -14,7 +14,8 @@
 
 .msp_writer <- function() {
   .msp_writer_ <- function(backend) {
-    variables <- backend@variables %>% 
+    variables <- backend@variables %>%
+      left_join(backend@format$mapping %>% filter(type=="write") %>% select(formatKey, order)) %>%
       group_by(spectrum_id) %>% 
       nest() %>% 
       ungroup() %>% 

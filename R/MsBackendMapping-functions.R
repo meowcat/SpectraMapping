@@ -19,11 +19,6 @@
     data_parsed <- o@format$reader(data)
     return(data_parsed)
     
-    res$mz <- IRanges::NumericList(res$mz)
-    res$intensity <- IRanges::NumericList(res$intensity)
-    res$dataOrigin <- f
-    res$msLevel <- as.integer(msLevel)
-    res
 }
 
 
@@ -59,7 +54,7 @@
             select(-formatKey)
         # Transform: first separate if necessary, then extract key/value, then rename with prefix
         if(!is.null(nesting$separator))
-            vars_act <- vars_act %>% separate_rows(nesting$separator)
+            vars_act <- vars_act %>% separate_rows(value, sep=nesting$separator)
         vars_act <- vars_act %>% 
             extract("value", regex=nesting$regex, into=c("formatKey", "value"))
         if(!is.null(nesting$prefix))
@@ -71,6 +66,33 @@
     # pass the vars through all unnesting actions
     vars_ <- nestings %>%
         reduce(apply_single_unnest,
+               .init = vars_)
+    vars_
+}
+
+
+.apply_all_nest <- function(nestings, vars_) {
+    apply_single_nest <- function(vars_, nesting) {
+        # Separate KVS into data which is transformed and data which is kept
+        # Also remove the nesting prefix
+        vars_keep <- vars_ %>% filter(!str_starts(formatKey, nesting$prefix))
+        vars_act <-  vars_ %>% 
+            filter(str_starts(formatKey, nesting$prefix)) %>%
+            mutate(formatKey = str_remove(formatKey, str_glue("^{nesting$prefix}")))
+        # Write out the value using the glue string
+        vars_act <- vars_act %>% mutate(value = str_glue(nesting$write))
+        # If there is a separator, ie the rows need to be collapsed to a single row:
+        # Collapse the text correspondingly
+        if(!is.null(nesting$separator))
+            vars_act <- vars_act %>% summarize(
+                value = paste(value, collapse = nesting$separator))
+        vars_act <- vars_act %>% mutate(formatKey = nesting$formatKey)
+        vars <- bind_rows(list(vars_keep, vars_act))
+        return(vars)
+    }
+    # pass the vars through all nesting actions
+    vars_ <- rev(nestings) %>%
+        reduce(apply_single_nest,
                .init = vars_)
     vars_
 }
@@ -109,7 +131,9 @@
                     names_from = "spectraKey",
                     values_from = "value",
                     values_fn = list) %>%
-        arrange(spectrum_id) %>%
+        arrange(spectrum_id)
+    
+    vars_table <- vars_table %>%
         .transform_types(o@fields)
     o@spectraData <- DataFrame(vars_table)
     o
@@ -122,15 +146,32 @@
         filter(type == "write")
     regex_map <- o@format$regex %>% 
         filter(type == "write")
+    # Keep only writable nestings
+    nestings <- o@format$nesting %>%
+        keep(~!is.null(.x$prefix)) %>%
+        keep(~!is.null(.x$write))
+    
+    
+    # separate "splitmaps" such as formatWriteKey: {1: name, *: synonym} 
+    
+    
     
     # Translate keys and pivot long
     data <- as_tibble(o@spectraData) %>%
-        mutate(across(-spectrum_id, as.character)) %>%
+        dplyr::mutate(across(-spectrum_id, function(x) map(x, as.character))) %>%
         pivot_longer(-spectrum_id, names_to = "spectraKey", values_to = "value",
-                     values_ptypes = list(value = character()))
+                     values_ptypes = list(value = list())) %>%
+        unnest(cols=c(value))
     vars_format <- data %>%
         inner_join(vars_map, by=c("spectraKey")) %>%
-        select(spectrum_id, formatKey, value)
+        select(spectrum_id, formatKey, value, selector, order)
+    
+    # If a selector applies to the writing entry, filter
+    vars_format <- vars_format %>%
+        group_by(formatKey, spectrum_id) %>%
+        mutate(selected = if_else(row_number()==1, "1", "*")) %>%
+        filter(is.na(selector) | selector == selected) %>%
+        select(-selector, -selected)
     
     # Translate verbatim values
     vars_dict <- vars_format %>%
@@ -143,6 +184,9 @@
     
     # Translate regex
     vars_all <- .apply_all_regex(regex_map, vars_all)
+    
+    # Apply nesting
+    vars_all <- .apply_all_nest(nestings, vars_all)
     
     o@variables <- vars_all
     o

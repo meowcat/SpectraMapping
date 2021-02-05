@@ -16,7 +16,8 @@
 -
   spectraKey: title
   formatKeyRead: [RECORD_TITLE, CH$NAME]
-  #formatKeyWrite: {1: RECORD_TITLE, *: CH$NAME}
+  formatKeyWrite: {'1'-: RECORD_TITLE, '*': CH$NAME}
+  #  
   #formatWriteKey: MSLEVEL
   #formatReadKey:  [MSLEVEL]
   ontologyKey: ["MS:1000511"]
@@ -86,7 +87,7 @@
   spectraKey: collisionEnergy
   formatKey: MS@COLLISION_ENERGY
   regexRead: 
-    - {match: '[0-9]+.*', sub: '\1'}
+    - {match: '([0-9]+).*', sub: '\1'}
   regexWrite:
     - {match: '(.*)', sub: '\1'}
 -
@@ -95,6 +96,8 @@
 -
   spectraKey: rtime
   formatKey: CHROM@RETENTION_TIME
+  regexRead:
+   - {match: '([0-9]+).*', sub: '\1'}
 -
   spectraKey: precursorMz
   formatKey: ION@PRECURSOR_M/Z

@@ -73,6 +73,10 @@ sp4 <- Spectra(
   source = MsBackendMapping(format = MsFormatMassbank(parallel=FALSE, progress = TRUE)))
 
 
+sp4t <- sp4
+spectraData(sp4t@backend) <- spectraData(spMsp@backend)
+data_check <- sp4t@backend@variables
+
 system.time(
   sp2 <- Spectra(
     system.file("test_spectra/long_spectrum_test.mgf", package="SpectraMapping"),
