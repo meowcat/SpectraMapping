@@ -4,28 +4,39 @@
 \name{hidden_aliases}
 \alias{hidden_aliases}
 \alias{[,MsBackendMapping-method}
-\alias{as.list.MsBackendMapping}
-\alias{as.list,MsBackendMapping-method}
+\alias{.peaksData.MsBackendMapping}
+\alias{peaksData,MsBackendMapping-method}
 \alias{intensity,MsBackendMapping-method}
+\alias{length,MsBackendMapping-method}
 \alias{mz,MsBackendMapping-method}
 \alias{lengths,MsBackendMapping-method}
+\alias{export,MsBackendMapping-method}
 \alias{spectraData<-,MsBackendMapping-method}
 \alias{spectraData,MsBackendMapping-method}
+\alias{spectraVariables,MsBackendMapping-method}
 \title{Internal page for hidden aliases}
 \usage{
-\method{as.list}{MsBackendMapping}(x)
+.peaksData.MsBackendMapping(object)
 
-\S4method{as.list}{MsBackendMapping}(x)
+\S4method{peaksData}{MsBackendMapping}(object)
 
 \S4method{intensity}{MsBackendMapping}(object)
+
+\S4method{length}{MsBackendMapping}(x)
 
 \S4method{mz}{MsBackendMapping}(object)
 
 \S4method{lengths}{MsBackendMapping}(x, use.names = FALSE)
 
+\S4method{export}{MsBackendMapping}(object, x, file = tempfile())
+
 \S4method{spectraData}{MsBackendMapping}(object) <- value
 
-\S4method{spectraData}{MsBackendMapping}(object, columns = spectraVariables(object))
+\S4method{spectraData}{MsBackendMapping}(object, columns = object@spectraVariables)
+
+\S4method{spectraVariables}{MsBackendMapping}(object)
+
+\S4method{[}{MsBackendMapping}(x, i, j, ..., drop = FALSE)
 }
 \description{
 For S4 methods that require a documentation entry but only clutter the index.

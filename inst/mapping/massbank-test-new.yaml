@@ -1,0 +1,54 @@
+- action: nesting
+  params:
+  - { source: '*AC$CHROMATOGRAPHY', prefix: 'CHROM@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+  - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+  - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+- action: extract
+  params: 
+  - source: 'MS@COLLISION_ENERGY'
+    target: ['*collisionEnergy', collisionEnergyUnit]
+    read: '([0-9]+)\s?(.*)'
+    write: '{collisionEnergy} {collisionEnergyUnit}'
+  - source: 'CHROM@RETENTION_TIME'
+    target: ['temp_rt', 'temp_rt_unit']
+    read: '([0-9.]+)\s?(.*)'
+    write: '{temp_rt} {temp_rt_unit}'
+    convert: TRUE
+    trim: TRUE
+- action: translate
+  params:
+  - source: 'temp_rt_unit'
+    target: '*rtime_conversion_factor'
+    dictionary:
+    - {value: 60, read: 'min', write: 'min'}
+    - {value: 1, read: 'sec', write: 'sec'}
+- action: type
+  source: [temp_rt, rtime_conversion_factor]
+  type: numeric
+- action: mutate
+  params:
+  - source: 'temp_rt'
+    target: '*rtime'
+    read: '{temp_rt * rtime_conversion_factor}'
+    write: '{rtime / rtime_conversion_factor}'
+- action: translate
+  params:
+  - source: 'MS@ION_MODE'
+    target: '*polarity'
+    dictionary:
+    - {value: 1, read: ['POSITIVE', 'positive'], write: 'POSITIVE'}
+    - {value: 0, read: ['NEGATIVE', 'negative'], write: 'NEGATIVE'}
+- action: mapping
+  params:
+  - { source: CH$FORMULA, target: formula }
+  - { source: AUTHORS, target: authors }
+  - { source: LINK@INCHIKEY, target: inchikey }
+  - { source: ION@PRECURSOR_M/Z, target: precursorMz }
+- action: mapping
+  params:
+  - implicit: TRUE
+    source: 'MS@RESOLUTION'
+    target: resol
+- action: type
+  defaults: TRUE
