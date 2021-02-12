@@ -11,10 +11,12 @@ get_glue <- function() {
 }
  
 load_mapping <- function(format, mapping) {
-  format$mapping <- spectraMapping(mapping)
-  format$dictionary <- spectraDictionary(mapping)
-  format$regex <- spectraRegex(mapping)
-  format$nesting <- spectraNesting(mapping)
+  
+  format$mapping <- mapping
+  # spectraMapping(mapping)
+  # format$dictionary <- spectraDictionary(mapping)
+  # format$regex <- spectraRegex(mapping)
+  # format$nesting <- spectraNesting(mapping)
   return(format)
 }
 

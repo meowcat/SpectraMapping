@@ -60,8 +60,25 @@ Processing order is as follows:
  * Should this be based on `spectraData` variables or on KVS variables? When reading, it is definitely KVS variables, but when writing, the user doesn't know those. Or use dataStorage?
 
 
-# Entry mapping
-This i
+# New format: actions with parameters
+
+## All actions
+* `source`: source field. If prefixed with an asterisk, this marks the field as `sourceVariable`, i.e it is file-writable: the value of this column will end up being written to the export file on export.
+* `target`: one or more target fields. If prefixed with an asterisk, this marks the field as `spectraVariable`, i.e. it will be visible to the end user using `spectraData`. Note that in the action `mapping`, the asterisk is implied, as this is the only purpose of the action, except if param `explicit` is set. If `explicit` is set, the asterisk is required to set the mapping.
+* Note: Where apt, the `*` flag is taken from a corresponding field dictating the name, i.e. `prefix` for the `nesting` action.
+
+
+## Action `transform`
+
+* `read`: regular expression(s) in the format One of the following: 
+    * One regular expression in the format `/EXPR/` with as many capture groups as target fields; here any 
+    * Multiple regular expressions (as many as target fields) with one capture group each
+    * Multiple regular expressions with as many capture groups as target fields. In this case, the first one matching is applied to the field.
+* `write`: a `glue` expression
+
+
+
+
 
 ## Fields
 The file consists of a list of field translation definitions.

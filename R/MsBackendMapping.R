@@ -59,17 +59,21 @@ setOldClass("MsFormat")
 
 
 setClass("MsBackendMapping",
-         contains = "MsBackendDataFrame",
+         contains = "MsBackend",
          slots = c(format = "MsFormat",
                    variables = "data.frame",
                    peaks = "data.frame",
-                   fields = "data.frame"
+                   fields = "data.frame",
+                   spectraVariables = "character",
+                   sourceVariables = "character"
                    ),
          prototype = prototype(spectraData = DataFrame(),
                                format = dummyFormat,
                                fields = tibble(),
                                variables = tibble(),
                                peaks = tibble(),
+                               spectraVariables = character(),
+                               sourceVariables = character(),
                                readonly = FALSE,
                                version = "0.1"))
 
@@ -97,16 +101,23 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
                   stop("file(s) ",
                        paste(files[!file.exists(files)], collapse = ", "),
                        " not found")
-              ## Import data and rbind.
+              ## Import data and rbind: this produces a long-form key-value store for each spectrum
               message("Start data import from ", length(files), " files ... ",
                       appendLF = FALSE)
-              res <- .read_mapping(object, files)
-              object@peaks <- map_dfr(res, "ions", .id = "spectrum_id") %>% mutate(spectrum_id = as.integer(spectrum_id))
-              object@variables <- map_dfr(res, "variables", .id = "spectrum_id") %>% mutate(spectrum_id = as.integer(spectrum_id))
+              res <- map(files, ~ .parse_to_kvs(object, .x)) %>% flatten()
+              object@peaks <- map_dfr(res, "ions", .id = "spectrum_id") %>% 
+                mutate(spectrum_id = as.integer(spectrum_id))
+              # transform the long-form KVS to a table such as the one from MsBackendDataFrame
+              object@variables <- map_dfr(res, "variables", .id = "spectrum_id") %>%
+                mutate(spectrum_id = as.integer(spectrum_id)) %>%
+                pivot_wider(names_from = "formatKey", values_from = "value", values_fn = list)
+              object@sourceVariables <- colnames(object@variables)
               message("done")
-              object <- .fill_variables(object)
-              object$dataStorage <- "<memory>"
-              object$centroided <- TRUE
+              # Apply mapping transformations
+              if(!is.null(object@format$mapping))
+                object <- .fill_variables(object)
+              object@variables$dataStorage <- "<memory>"
+              object@variables$centroided <- TRUE
               return(object)
               
             
@@ -130,6 +141,11 @@ setMethod("peaksData", "MsBackendMapping", .peaksData.MsBackendMapping)
 #' @rdname hidden_aliases
 setMethod("intensity", "MsBackendMapping", function(object) {
   NumericList(lapply(peaksData(object), "[", , 2), compress = FALSE)
+})
+
+#' @rdname hidden_aliases
+setMethod("length", "MsBackendMapping", function(x) {
+  nrow(x@variables)
 })
 
 #' @rdname hidden_aliases
@@ -185,6 +201,7 @@ setReplaceMethod("spectraData", "MsBackendMapping", function(object, value) {
 })
   
 
+
 #' @rdname hidden_aliases
 #'
 #' @importFrom methods as
@@ -193,20 +210,25 @@ setReplaceMethod("spectraData", "MsBackendMapping", function(object, value) {
 #'
 #' @importMethodsFrom S4Vectors lapply
 setMethod("spectraData", "MsBackendMapping",
-          function(object, columns = spectraVariables(object)) {
-            df_columns <- intersect(columns,colnames(object@spectraData))
-            res <- object@spectraData[, df_columns, drop = FALSE]
+          function(object, columns = object@spectraVariables) {
+            df_columns <- intersect(columns,colnames(object@variables))
+            res <- object@variables[, df_columns, drop = FALSE] %>% DataFrame()
             if("mz" %in% columns)
               res$mz <- mz(object)
             if("intensity" %in% columns)
               res$intensity <- intensity(object)
             columns_ <- setdiff(columns, colnames(res))
             for(col in columns_) {
-              res[, col] <- Spectra:::.get_column(object@spectraData, col)
+              res[, col] <- Spectra:::.get_column(object@variables, col)
             }
             res[, columns, drop = FALSE]
           })
 
+#' @rdname hidden_aliases
+setMethod("spectraVariables", "MsBackendMapping",
+          function(object) {
+            return(object@spectraVariables)
+          })
 
 
 
@@ -229,4 +251,104 @@ MsBackendMapping <- function(format, fields = .load_default_fields()) {
 #' @rdname hidden_aliases
 setMethod("[", "MsBackendMapping", function(x, i, j, ..., drop = FALSE) {
   .subset_backend_mapping(x, i)
+})
+
+
+
+# Batch assignment for all setters/getters
+
+.spectra_aliases_list <- c(
+  #"acquisitionNum",
+  "centroided",
+  "collisionEnergy",
+  "dataOrigin",
+  "dataStorage",
+  #"ionCount",
+  # isCentroided
+  "isolationWindowLowerMz",
+  "isolationWindowTargetMz",
+  "isolationWindowUpperMz",
+  "msLevel",
+  "polarity",
+  "precScanNum",
+  "precursorCharge",
+  "precursorIntensity",
+  "precursorMz",
+  "rtime",
+  "scanIndex",
+  "smoothed"
+  # spectraNames
+)
+.spectra_aliases_ro <- c(
+  "precScanNum",
+  "scanIndex"
+)
+
+
+#' data types of spectraData columns
+#'
+#' @noRd
+.SPECTRA_DATA_COLUMNS <- c(
+  msLevel = "integer",
+  rtime = "numeric",
+  acquisitionNum = "integer",
+  scanIndex = "integer",
+  mz = "NumericList",
+  intensity = "NumericList",
+  dataStorage = "character",
+  dataOrigin = "character",
+  centroided = "logical",
+  smoothed = "logical",
+  polarity = "integer",
+  precScanNum = "integer",
+  precursorMz = "numeric",
+  precursorIntensity = "numeric",
+  precursorCharge = "integer",
+  collisionEnergy = "numeric",
+  isolationWindowLowerMz = "numeric",
+  isolationWindowTargetMz = "numeric",
+  isolationWindowUpperMz = "numeric"
+)
+
+.alias_read_fun <- function(.spectra_alias_) {
+  spectra_alias_gen <- .SPECTRA_DATA_COLUMNS[.spectra_alias_]
+  function(object) {
+    spectra_alias_sym <- sym(.spectra_alias_)
+    message(.spectra_alias_)
+    if(.spectra_alias_ %in% colnames(object@variables))
+      return(object@variables %>% pull(spectra_alias_sym))
+    #if(spectra_alias %in% .SPECTRA_DATA_COLUMNS)
+    return(do.call(spectra_alias_gen, list(length(object))))
+  }
+}
+
+.alias_write_fun <- function(.spectra_alias_) {
+  spectra_alias_sym <- sym(.spectra_alias_)
+  value_type <- .SPECTRA_DATA_COLUMNS[.spectra_alias_]
+  function(object, value) {
+    if (!is(value, value_type) || length(value) != length(object))
+      stop(glue("'value' has to be a '{value_type}' of length {length(object)}"))
+    object@variables <- object@variables %>% mutate(!!spectra_alias_sym := as(value, value_type))
+    object@spectraVariables <- union(object@spectraVariables, .spectra_alias_)
+    validObject(object)
+    object
+  }
+}
+
+for(spectra_alias in .spectra_aliases_list) {
+
+  #' @rdname hidden_aliases
+  setMethod(spectra_alias, "MsBackendMapping", .alias_read_fun(spectra_alias))
+  
+  if(!(spectra_alias %in% .spectra_aliases_ro))
+  {
+    #' @rdname hidden_aliases
+    setReplaceMethod(spectra_alias, "MsBackendMapping", .alias_write_fun(spectra_alias))
+  }
+}
+
+
+# very valid object all the time
+setValidity("MsBackend", function(object) {
+  return(TRUE)
 })

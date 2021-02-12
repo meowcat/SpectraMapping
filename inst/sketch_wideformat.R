@@ -19,8 +19,10 @@ massbankdata$`AC$MASS_SPECTROMETRY` %>%
         values_fn = list)
 
 
+massbankdata2 <- massbankdata[c(1,1,1),]
+
 massbankdata3 <- 
-  massbankdata %>% mutate(
+  massbankdata2 %>% mutate(
     `AC$CHROMATOGRAPHY` = `AC$CHROMATOGRAPHY`  %>% 
   map( ~ tibble(value = .x) %>% mutate(id_dummy = 1)) %>% 
   map( ~ extract(.x, value, regex = "(.*?) (.*)", into = c("key", "value"))) %>%
@@ -29,7 +31,8 @@ massbankdata3 <-
       names_prefix = "MS@", 
       values_from = "value",
       values_fn = list)
-  )
+  ) %>%
+  unnest(`AC$CHROMATOGRAPHY`)
 
 massbankdata4 <- massbankdata3[c(1,1),]
 massbankdata4$`AC$CHROMATOGRAPHY`[[2]] <- 

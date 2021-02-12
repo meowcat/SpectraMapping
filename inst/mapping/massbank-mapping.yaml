@@ -16,7 +16,7 @@
 -
   spectraKey: title
   formatKeyRead: [RECORD_TITLE, CH$NAME]
-  formatKeyWrite: {'1'-: RECORD_TITLE, '*': CH$NAME}
+  formatKeyWrite: {'1': RECORD_TITLE, '*': CH$NAME}
   #  
   #formatWriteKey: MSLEVEL
   #formatReadKey:  [MSLEVEL]

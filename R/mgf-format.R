@@ -13,6 +13,7 @@ MsFormatMgf <- function(parallel = FALSE, progress=FALSE) {
 }
 
 .mgf_mapping <- function() {
-  loadSpectraMapping(system.file("mapping/mgf-mapping.yaml", package="SpectraMapping"))
+  return(NULL)
+  #loadSpectraMapping(system.file("mapping/mgf-mapping.yaml", package="SpectraMapping"))
 }
 

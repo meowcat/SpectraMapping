@@ -11,7 +11,7 @@
 ##' @author Michael Stravs
 ##' 
 ##' @noRd
-.read_mapping <- function(o, f, ...) {
+.parse_to_kvs <- function(o, f, ...) {
     if (length(f) != 1L)
         stop("Please provide a single file.")
     
@@ -256,7 +256,7 @@
 
 .subset_peaks <- function(o) {
     o@peaks %>%
-        filter(spectrum_id %in% o@spectraData$spectrum_id)
+        filter(spectrum_id %in% o@variables$spectrum_id)
 }
 
 

@@ -14,6 +14,7 @@ MsFormatMassbank <- function(parallel = FALSE, progress=FALSE) {
 }
 
 .massbank_mapping <- function() {
-  loadSpectraMapping(system.file("mapping/massbank-mapping.yaml", package="SpectraMapping"))
+  return(NULL)
+  #loadSpectraMapping(system.file("mapping/massbank-mapping.yaml", package="SpectraMapping"))
 }
 

@@ -11,5 +11,6 @@ MsFormatMsp <- function(parallel = FALSE, progress = FALSE) {
 }
 
 .msp_mapping <- function() {
-  loadSpectraMapping(system.file("mapping/msp-mapping.yaml", package="SpectraMapping"))
+  return(NULL)
+  #loadSpectraMapping(system.file("mapping/msp-mapping.yaml", package="SpectraMapping"))
 }
