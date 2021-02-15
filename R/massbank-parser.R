@@ -22,8 +22,8 @@
         if(length(block) > 1) {
           r1 <- block[1] %>% str_match("^.*?: (.*)$") %>% `[`(,2)
           rn <- block[-1] %>% str_match("\\s\\s(.*)") %>% `[`(,2)
-          block_data <- c(paste("HEADER", r1),
-                          paste("ENTRY", rn))
+          block_data <- c(paste("index", r1),
+                          paste(seq_along(rn), rn))
         }
         else
           block_data <- block %>% str_match("^.*?: (.*)$") %>% `[`(,2)
@@ -68,6 +68,7 @@
     
     data_ <- str_split(data, "\n//\n*")
     data_ <- data_[[1]]
+    data_ <- data_ %>% discard(~ .x == "")
     
     pb <- NULL
     if(progress)

@@ -3,6 +3,51 @@
 NULL
 
 
+
+#' Get proto-Backend object
+#' 
+#' Get a minimally filled `MsBackendMapping` with some `variables` filled to run unittests etc.
+#'
+#' @param n the number of spectra to fake
+#' @param peaks the number of peaks per spectrum
+#' @param variables a tibble with variables set
+#'
+#' @return
+#' @export
+#'
+#' @examples
+get_proto_backend <- function(variables = NULL, peaks = 4, ...) {
+   if(is.null(variables))
+      variables <- tibble(...)
+   n <- nrow(variables)
+   be <- new("MsBackendMapping")
+   mz_ <- rerun(n, runif(peaks, min = 60, max = 600))
+   intensity_ <- rerun(n, rexp(peaks) * 1e4)
+   be@peaks <- map2(mz_, intensity_,  ~ tibble(mz=.x, int=.y)) %>% bind_rows(.id='spectrum_id')
+   be@variables <- variables %>% rowid_to_column("spectrum_id")
+   return(be)
+}
+
+#' Get a proto-action
+#' 
+#' Get an action ad-hoc from a parameter list for use in unit tests etc.
+#'
+#' @param action The action name
+#' @param ... Params
+#'
+#' @return
+#' @export
+#'
+#' @examples
+get_proto_action <- function(action, ...) {
+   params <- (list(
+      action = action,
+      ...
+   ))
+   get_actions(list(params))[[1]]
+}
+
+
 get_actions <- function(workflow) {
    map(workflow, function(settings) {
       message("Action: ", settings$action)
@@ -125,6 +170,24 @@ MetadataActionBase <- R6::R6Class(
 )
 
 
+#' Metadata action: mapping
+#' 
+#' Maps a field in the input data to a field in the output data.
+#' By default, registers the output field as a spectraVariable.
+#' 
+#' @details 
+#' 
+#' `source`: field of origin
+#' `target`: target field
+#' `explicit`: If `TRUE`, a star marker is required to register the output field as a `spectraVariable`.
+#'   This is `FALSE` by default, since the main purpose of this action is mapping input to `spectraVariable`s.
+#' 
+#' @example 
+#' 
+#' mapping <- get_proto_action("mapping", source='FIELD', target='field')
+#' backend <-  get_proto_backend(FIELD=c('1','2','3'))
+#' mapped <- mapping$execute_read()
+#' 
 MetadataActionMapping <- R6::R6Class(
       "MetadataActionMapping",
       inherit = MetadataActionBase,
@@ -160,8 +223,8 @@ MetadataActionMapping <- R6::R6Class(
 ))
 
 
-MetadataActionConcatSplit<- R6::R6Class(
-   "MetadataActionConcatSplit",
+MetadataActionCrossmap <- R6::R6Class(
+   "MetadataActionCrossmap",
    inherit = MetadataActionBase,
    public = list(
       
@@ -295,6 +358,102 @@ MetadataActionExtract <- R6::R6Class(
       return(data)
    }
 ))
+
+
+MetadataActionTabular <- R6::R6Class(
+   "MetadataActionTabular",
+   inherit = MetadataActionBase,
+   public = list(
+      
+      base_settings = list(
+         source = '',
+         target = c(),
+         header = NA,
+         sep = c(),
+         regex = c(),
+         trim = FALSE,
+         convert = FALSE, 
+         fill = "left", # sic! To deal with the non-subtagged comment case.
+         extra = "merge"
+      ),
+      
+      process_read = function(data, params) {
+         
+         source <- .v(params$source)
+         if(length(params$target) == 0)
+            target_ <- source
+         else
+            target_ <- params$target
+         target <- .v(target_)
+         set_spectra_var <- target[.flag(target_)] # may be multiple vars
+         
+         
+         # 
+         
+         # Decide on header
+         # NA: use "key", "value"
+         # 1: use first line
+         # a list: use the specified list
+         if(all(is.na(params$header))) {
+            header <- rep_along(table, list(c("key", "value")))
+            table <- data@variables[[source]]
+         }
+         else if(all(params$header == 1)) {
+            header_ <- data@variables[[source]] %>% map(~ .x[1])
+            table <- data@variables[[source]] %>% map(~ .x[-1])
+            if(length(params$regex) > 0)
+               header <- str_match(header_, params$regex) %>% `[`(1,-1)
+            else
+               header <- str_split(header_, params$sep)
+         }
+         else {
+            header <- rep_along(table, params$header)
+            table <- data@variables[[source]]
+         }
+
+         
+         
+            
+         temp_col <- table %>% map(~ tibble(col = .x))
+         
+         if(length(params$regex) > 0) {
+            data@variables[[target]] <- map2(
+               temp_col, header,
+               ~ .x %>% tidyr::extract(col, into = .y, regex = params$regex, convert = params$convert)
+            )
+         }
+         else if(length(params$sep) > 0) {
+            #message('Tabular: using sep')
+            data@variables[[target]] <- map2(
+               temp_col, header,
+               ~ .x %>% separate(col, into = .y, sep = params$sep, convert = params$convert)
+            )
+         } 
+         
+         if(params$trim) {
+            data@variables[[target]] <- data_variables[[target]] %>%
+               map(function(t) t %>% mutate(across(.fns = ~ str_trim(.x))))
+         }
+         
+         
+         data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
+         
+         return(data)
+      },
+      process_write = function(data, params) {
+         
+         source <- .v(params$source)
+         target <- .v(params$target)
+         set_source_var <- source[.flag(params$source)]
+         
+         data@variables <- data@variables %>%
+            mutate(!!source := glue_data(params$write))
+         
+         data@sourceVariables <- union(data@sourceVariables, set_source_var)
+         
+         return(data)
+      }
+   ))
 
 
 MetadataActionMutate <- R6::R6Class(
@@ -495,6 +654,68 @@ MetadataActionType<- R6::R6Class(
    )
 )
 
+#' Metadata action: split
+#' 
+#' Split (in read direction) a string field into a character vector according to a separator.
+#' 
+#' @example
+#'
+MetadataActionSplit <- R6::R6Class(
+      "MetadataActionSplit",
+      inherit = MetadataActionBase,
+      
+      public = list(
+         base_settings = list(
+            source = '',
+            sep = c(),
+            regex = c(),
+            n = Inf
+         ),
+         
+         
+         process_read = function(data, params) {
+         
+            source <- .v(params$source)
+            if(length(params$target) == 0)
+               target_ <- source
+            else
+               target_ <- params$target
+            target <- .v(target_)
+            set_spectra_var <- target[.flag(target_)]
+            
+            if(length(params$sep) > 0)
+               pattern <- fixed(params$sep)
+            else
+               pattern <- params$sep
+            data@variables[[target]] <- data@variables[[source]] %>% str_split(pattern)
+            data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
+            return(data)
+         }
+         
+         process_write = function(data, params) {
+            
+            source <- .v(params$source)
+            if(length(params$target) == 0)
+               target_ <- source
+            else
+               target_ <- params$target
+            target <- .v(target_)
+            set_source_var <- source[.flag(params$source)] 
+            # 
+            # if(length(params$sep) > 0)
+            #    pattern <- fixed(params$sep)
+            # else
+            pattern <- params$sep
+            data@variables[[source]] <- data@variables[[target]] %>% map(str_flatten, pattern)
+            data@sourceVariables <- union(data@sourceVariables, set_source_var)
+            return(data)
+         }
+         
+            
+      )
+)
+         
+
 
 MetadataActionNest <- R6::R6Class(
    "MetadataActionNest",
@@ -553,8 +774,9 @@ MetadataActionNest <- R6::R6Class(
    nesting = MetadataActionNest,
    extract = MetadataActionExtract,
    translate = MetadataActionTranslate,
-   concat_split = MetadataActionConcatSplit,
+   crossmap = MetadataActionCrossmap,
    type = MetadataActionType,
-   mutate = MetadataActionMutate
+   mutate = MetadataActionMutate,
+   tabular = MetadataActionTabular
 )
 
