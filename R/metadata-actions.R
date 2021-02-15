@@ -60,6 +60,14 @@ get_actions <- function(workflow) {
    })
 }
 
+# Tolerant helpers
+maybe_set_names <- function(x, ...) {
+   if(length(x) > 0)
+      return(set_names(x, ...))
+   else
+      return(x)
+}
+
 
 # Functions to extract the variable name and flag status from transformation yaml entries.
 .v <- function(x) {
@@ -121,10 +129,10 @@ MetadataActionBase <- R6::R6Class(
                params_ <- self$merge_settings(params)
                data <- self$process_write(data, params_)
                return(data)
-            })
+            }, .init = backend)
          }
          else {
-            backend <- self$process_write(data, self$settings)
+            backend <- self$process_write(backend, self$settings)
          }
          return(backend)
       },
@@ -182,11 +190,11 @@ MetadataActionBase <- R6::R6Class(
 #' `explicit`: If `TRUE`, a star marker is required to register the output field as a `spectraVariable`.
 #'   This is `FALSE` by default, since the main purpose of this action is mapping input to `spectraVariable`s.
 #' 
-#' @example 
+#' @examples
 #' 
 #' mapping <- get_proto_action("mapping", source='FIELD', target='field')
 #' backend <-  get_proto_backend(FIELD=c('1','2','3'))
-#' mapped <- mapping$execute_read()
+#' mapped <- mapping$execute_read(backend)
 #' 
 MetadataActionMapping <- R6::R6Class(
       "MetadataActionMapping",
@@ -222,7 +230,60 @@ MetadataActionMapping <- R6::R6Class(
       }
 ))
 
-
+#' Metadata action: crossmap
+#' 
+#' This action is to join and split multientry data.
+#' For example, in NIST MSP, `Name` is a single compound name,
+#' and all subsequent `Synon` are synonyms. In MassBank data,
+#' these need to go all into `CH$NAME`. There are now two ways to do this:
+#' * one: the internal representation is the "joined" one. 
+#'    On reading from MSP, we merge `Name` and `Synon` to e.g. `names`.
+#'    On writing to MassBank, `names` -> `CH$NAME`.
+#' * the other: the internal representation is the "separated" one. 
+#'    On reading from MSP, `Name` -> `name` and `Synon` -> `synonyms`
+#'    On writing to MassBank, we merge `name` and `synonyms` to `CH$NAME`. 
+#'    On reading from MassBank, `CH$NAME[1]` to `name`, all other `CH$NAME` entries to `synonyms`. 
+#'    
+#' This can also *split* a field on *reading*!
+#'    
+#' @details 
+#' 
+#' `source`: fields of origin
+#' `target`: target fields
+#' `read_split`: After joining the `source` fields together, how to distribute them to `target`? 
+#'     E.g. `[1, *]` extracts the first entry into the first `target` field and the rest into the second `target` field.
+#' `write_split`: Same question when writing.
+#' 
+#' @examples 
+#'
+#' # Split on write, join on read
+#'  
+#' crossmap <- get_proto_action(
+#'    "crossmap",
+#'    source=c('Name', 'Synon'),
+#'    target='names',
+#'    read_split = list(names="*"),
+#'    write_split = list('Name' = '1', 'Synon' = '*'))
+#' 
+#' backend <-  get_proto_backend(Name=list('Anton', 'Franz', c()), Synon=list(c(), c('Francis', 'Franziskus'), c()))
+#' fw <- crossmap$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(names)
+#' bw <- crossmap$execute_write(fw)
+#' 
+#' # Split on read, join on write
+#' 
+#' backend <-  get_proto_backend(CHNAME=list(c('N1', 'N2', 'N3'), c('Francis', 'Franziskus'), c('Nsingle'), c()))
+#' crossmap <- get_proto_action(
+#'    "crossmap",
+#'    source=c('CHNAME'),
+#'    target=c('name', 'synonyms'),
+#'    read_split = list(name="1", synonyms="*"),
+#'    write_split = list(CHNAME="*")
+#'    )
+#' fw <- crossmap$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(-CHNAME)
+#' bw <- crossmap$execute_write(fw)
+#' 
 MetadataActionCrossmap <- R6::R6Class(
    "MetadataActionCrossmap",
    inherit = MetadataActionBase,
@@ -246,11 +307,14 @@ MetadataActionCrossmap <- R6::R6Class(
          if(length(read_split) == 0)
             read_split <- rep("*", length(target))
          
+         
+         
+         
          # concatenate source columns into temp column
          # take the "column" offline for simplicity
-         temp_column <- select(all_of(source)) %>% 
+         temp_column <- data@variables %>% select(all_of(source)) %>% 
             pmap(~c(...)) %>% 
-            map(set_names, NULL)
+            map(maybe_set_names, NULL)
          # reverse, if desired (so one can pick from the tail)
          if(params$reverse)
             temp_column <- map(temp_column, rev)
@@ -263,6 +327,8 @@ MetadataActionCrossmap <- R6::R6Class(
             else {
                if (indices == "*") 
                   indices <- -consumed
+               else
+                  indices <- as.integer(indices)
                data@variables[[t]] <- map(temp_column, ~.x[indices])
                consumed <- c(consumed, indices)
             } 
@@ -278,12 +344,13 @@ MetadataActionCrossmap <- R6::R6Class(
          set_source_var <- source[.flag(params$source)]
          
          write_split <- params$write_split
-         if(length(read_split) == 0)
-            read_split <- rep("*", length(source))
+         if(length(write_split) == 0)
+            write_split <- rep("*", length(source))
          
-         temp_column <- select(all_of(target)) %>% 
+         temp_column <- data@variables %>% 
+            select(all_of(target)) %>% 
             pmap(~c(...)) %>% 
-            map(set_names, NULL)
+            map(maybe_set_names, NULL)
          # reverse, if desired (so one can pick from the tail)
          if(params$reverse)
             temp_column <- map(temp_column, rev)
@@ -296,6 +363,8 @@ MetadataActionCrossmap <- R6::R6Class(
             else {
                if (indices == "*") 
                   indices <- -consumed
+               else
+                  indices <- as.integer(indices)
                data@variables[[t]] <- map(temp_column, ~.x[indices])
                consumed <- c(consumed, indices)
             } 
@@ -307,7 +376,28 @@ MetadataActionCrossmap <- R6::R6Class(
       }
    ))
 
-
+#' Metadata action: extract
+#' 
+#' Converts one metadata column into one or multiple columns based on a separator or on a regex pattern. 
+#' Note that the column may be single- or multilined but is typically single-lined. 
+#' This is really used e.g. to read a numeric value out of a formatted entry. The demo application is retention times.
+#' Contrast with:
+#' * `split`: Converts one single-line metadata column into one multiline metadata column based on a separator or regex pattern
+#' * `nesting`: Converts one multiline metadata column into multiple columns
+#' * `tabular`: Converts one usually multiline metadata column into a tabular column
+#' 
+#' @examples
+#' backend <- get_proto_backend(RT = c("4 min", "30 sec"))
+#' action <- get_proto_action(
+#'    "extract",
+#'    source='RT',
+#'    target=c('rt', 'rt_unit'),
+#'    read = '([0-9]+)\\s?(.*)',
+#'    write = '{rt} {rt_unit}',
+#'    convert = TRUE)
+#' fw <- action$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(-RT)
+#' bw <- action$execute_write(fw)
 MetadataActionExtract <- R6::R6Class(
    "MetadataActionExtract",
    inherit = MetadataActionBase,
@@ -351,7 +441,7 @@ MetadataActionExtract <- R6::R6Class(
       set_source_var <- source[.flag(params$source)]
       
       data@variables <- data@variables %>%
-         mutate(!!source := glue_data(params$write))
+         mutate(!!source := glue(params$write))
       
       data@sourceVariables <- union(data@sourceVariables, set_source_var)
       
@@ -359,7 +449,55 @@ MetadataActionExtract <- R6::R6Class(
    }
 ))
 
-
+#' Metadata action: tabular
+#' 
+#' Converts a metadata column into a column of data frames. This can be used
+#' either to get a "subtag-style" column into a key-value store, or to actually
+#' read a table like the MassBank peak annotations. 
+#' Note: in some cases, this is probably best prepended with `split`, e.g. for NIST comments.
+#' 
+#' @examples
+#'  
+#' # Key-value store reading
+#' backend <- get_proto_backend(COMMENT = list(c("INTERNAL_ID 1234", "MYNAME Michele", "formless_nosplit"),
+#'                                             c("formless nosplit"),
+#'                                             c(),
+#'                                             c("INTERNAL_ID 1232", "MYNAME something")))
+#' action <- get_proto_action(
+#'    "tabular",
+#'    source = "COMMENT",
+#'    target = "commentData",
+#'    regex = "([A-Z_-]*)\\s?(.*)",
+#'    write = "{key} {value}"
+#' )
+#' fw <- action$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(-COMMENT)
+#' bw <- action$execute_write(fw)
+#' 
+#' Table reading with colnames
+#' backend <- get_proto_backend(
+#'    PKANNOT = list(
+#'       c("index m/z tentative_formula formula_count mass error(ppm)",
+#'         "1 78.9189 Br- 1 78.9189 -0.33",
+#'         "2 193.9252 C7HBrNO- 1 193.9247 2.32",
+#'         "3 273.8506 C7H2Br2NO- 1 273.8509 -1.06"),
+#'       c("index m/z tentative_formula formula_count mass error(ppm)",
+#'         "1 78.9188 Br- 1 78.9189 -0.71",
+#'         "2 193.9246 C7HBrNO- 1 193.9247 -0.56",
+#'         "3 273.8512 C7H2Br2NO- 1 273.8509 1.16"),
+#'       c(),
+#'       c("index m/z tentative_formula formula_count mass error(ppm)")
+#'    ))
+#' action <- get_proto_action(
+#'    "tabular",
+#'    source = "PKANNOT",
+#'    target = "annotation",
+#'    sep= " ",
+#'    header= 1
+#' )
+#' fw <- action$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(-PKANNOT)
+#' bw <- action$execute_write(fw)
 MetadataActionTabular <- R6::R6Class(
    "MetadataActionTabular",
    inherit = MetadataActionBase,
@@ -371,6 +509,7 @@ MetadataActionTabular <- R6::R6Class(
          header = NA,
          sep = c(),
          regex = c(),
+         write = c(),
          trim = FALSE,
          convert = FALSE, 
          fill = "left", # sic! To deal with the non-subtagged comment case.
@@ -400,7 +539,9 @@ MetadataActionTabular <- R6::R6Class(
          }
          else if(all(params$header == 1)) {
             header_ <- data@variables[[source]] %>% map(~ .x[1])
-            table <- data@variables[[source]] %>% map(~ .x[-1])
+            table <- data@variables[[source]] %>% 
+               map(~ .x[-1]) %>%
+               modify_if(is.null, ~ character(0))
             if(length(params$regex) > 0)
                header <- str_match(header_, params$regex) %>% `[`(1,-1)
             else
@@ -444,18 +585,33 @@ MetadataActionTabular <- R6::R6Class(
          
          source <- .v(params$source)
          target <- .v(params$target)
+         target_sym <- sym(target)
          set_source_var <- source[.flag(params$source)]
          
-         data@variables <- data@variables %>%
-            mutate(!!source := glue_data(params$write))
-         
+         if(length(params$write) > 0)
+            data@variables <- data@variables %>%
+               mutate(!!source := map(!!target_sym, ~.x %>% glue_data(params$write)) %>% as.character())
+         else {
+            temp_col <- data@variables[[target]] %>% map(~.x %>% unite("col", sep=params$sep)) %>% map(~ pull(.x, "col"))
+            if(params$header == 1) {
+               headers <- data@variables[[target]] %>% 
+                  map(colnames) %>% 
+                  modify_if(~ all(.x == "NULL"), ~ character(0)) %>%
+                  map(paste, collapse = params$sep) %>%
+                  modify_if(~.x == "", ~ character(0))
+               temp_col <- map2(temp_col, headers, ~c(.y, .x))
+            }
+            data@variables[[source]] <- temp_col
+         }
+            
+            
          data@sourceVariables <- union(data@sourceVariables, set_source_var)
          
          return(data)
       }
    ))
 
-
+#'
 MetadataActionMutate <- R6::R6Class(
    "MetadataActionMutate",
    inherit = MetadataActionBase,
@@ -613,7 +769,7 @@ MetadataActionTranslate <- R6::R6Class(
 )
 
 
-MetadataActionType<- R6::R6Class(
+MetadataActionType <- R6::R6Class(
    "MetadataActionType",
    inherit = MetadataActionBase,
    
@@ -690,7 +846,7 @@ MetadataActionSplit <- R6::R6Class(
             data@variables[[target]] <- data@variables[[source]] %>% str_split(pattern)
             data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
             return(data)
-         }
+         },
          
          process_write = function(data, params) {
             
