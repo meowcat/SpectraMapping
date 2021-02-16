@@ -3,11 +3,11 @@
 NULL
 
 
-
+#' 
 #' Get proto-Backend object
 #' 
 #' Get a minimally filled `MsBackendMapping` with some `variables` filled to run unittests etc.
-#'
+#' 
 #' @param n the number of spectra to fake
 #' @param peaks the number of peaks per spectrum
 #' @param variables a tibble with variables set
@@ -68,6 +68,19 @@ maybe_set_names <- function(x, ...) {
       return(x)
 }
 
+# 
+# glue_restricted <- function(glue_str) {
+#    #env <- enquo(env)
+#    env <- parent.frame(1)$.data
+#    safe_fun <- lst(`*`, `/`, round)
+#    safe_env <- list2env(c(env, safe_fun), parent = emptyenv())
+#    glue(glue_str, .envir = safe_env)
+# }
+# 
+# df <- tibble(a = c(70,80,90,4,5), conversionunit = c(60,60,60,1,1))
+# pattern <- "{a/conversionunit} minutes" # loaded from user's config file
+# df <- df %>% mutate(output = glue_restricted("{a/conversionunit} minutes"))
+# 
 
 # Functions to extract the variable name and flag status from transformation yaml entries.
 .v <- function(x) {
@@ -77,20 +90,89 @@ maybe_set_names <- function(x, ...) {
    str_detect(x, '^\\*[^*]') | default
 }
 
-
+#' Base class for metadata actions
+#' 
+#' This class is the base for metadata actions.
+#' Any action will be executed by calling the method `execute_read` in the read direction, and
+#' `execute_write` in the write direction. Actions are parametrized with the `settings` field;
+#' the `settings` are set by merging the class-specific `base_settings` with the partial or full
+#'  `settings` passed on construction (i.e. base settings are overridden by instance settings).
+#'  
+#' Instance settings are composed from base settings (which override the base settings
+#' and optional `params` "sub-settings". The action is executed once for every
+#' `params` sub-settings, which are applied on top of the instance base settings.
+#' 
+#' This sounds complicated, but is quite simple. Examples:
+#' 
+#' ```
+#' action: mapping
+#' explicit: TRUE
+#' params:
+#' - {source: FIELD1, target: field1}
+#' - {source: FIELD2, target: field2}
+#' ```
+#' 
+#' Here, `FIELD1` is mapped to `field1`, `FIELD2` is mapped to `field2`, and
+#' `explicit = TRUE` is valid for both entries. Specific entries may override instance settings:
+#'  
+#' ```
+#' action: mapping
+#' explicit: TRUE
+#' params:
+#' - {source: FIELD1, target: field1}
+#' - {source: FIELD2, target: field2, explicit: FALSE}
+#' - {source: FIELD3, target: field3}
+#' ```
+#' Here, `explicit = TRUE` is valid for the first and third entries.
+#' 
+#' If no `params` are given, a single action is executed using instance settings:
+#' ```
+#' action: mapping
+#' explicit: TRUE
+#' source: field1
+#' target: FIELD1
+#' ```
+#' 
+#' Note that `explicit=TRUE` overrides the `base_settings` value of `explicit=FALSE`. Not setting
+#' `explicit` at all would result in `explicit=FALSE` behaviour.
+#'  
+#'  
+#' Implementing classes should 
+#' - specify appropriate `base_settings`
+#' - implement `process_read` and `process_write`, which process a *single* action
+#' (i.e. one `params` entry). The action obtains the `data` input (an `MsBackendMapping`)
+#' and a `params`, which is the merged (sic!) version of parameters. I.e., it contains 
+#' the `base_settings` overridden by the `settings` overridden by the `params` entry. 
+#' Both return the modified `data` (i.e. an `MsBackendMapping` object) again.
+#' 
+#' 
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
+#' 
+#' TODO: introduce reverse functionality
 MetadataActionBase <- R6::R6Class(
    "MetadataActionBase", 
    public = list(
       
+      #' @field name Action name
       name = "",
+      
+      #' @field base_settings Class base settings
       base_settings = list(),
+      
+      #' @field settings Instance settings
       settings = list(),
       
+      #' @description Log a message with specified level
+      #' @param level Log level, as specified in package ???
+      #' @param message Message to log
       log_level = function(level, message) {
          message <- glue(message, .envir = parent.frame())
          log_level(level, "{self$name}: {message}")
       },
       
+      #' @description Constructor
+      #' @param settings List of class-specific settings which override the base settings.
       initialize = function(settings) {
          #self$name <- name
          # Take base settings and replace with settings from user where one is provided
@@ -98,10 +180,13 @@ MetadataActionBase <- R6::R6Class(
          self$set_settings(settings)
          #log_info("initialized action: {self$name}, type {self$settings[['action']]}")
       },
-      # `execute` is the wrapper around `process`.
-      # If there are `params`, i.e. multiple steps are executed, `execute` loops through them.
-      # (The basic settings are updated with params, then the action is run.)
-      # If there are no params, only a single step is executed (with the "basic" settings.)
+      
+      #' @description Execution wrapper: read
+      #' @param backend `MsBackendMapping` to execute the metadata mapping step on
+      #' `execute` is the wrapper around `process`.
+      #' If there are `params`, i.e. multiple steps are executed, `execute` loops through them.
+      #' (The basic settings are updated with params, then the action is run.)
+      #' If there are no params, only a single step is executed (with the "basic" settings.)
       execute_read = function(backend) {
          #log_info("executing action: {self$name}")
          if(!is.null(self$settings$params)) {
@@ -116,12 +201,24 @@ MetadataActionBase <- R6::R6Class(
          }
          return(backend)
       },
-      # `process` executes a transformation method and returns the transformed backend.
-      # Here is where the implementation goes.
+      
+      #' @description Action implementation
+      #' @param data `MsBackendMapping` to execute the metadata mapping step on
+      #' @param params List of parameters for a single action (one `params` entry fully merged.)
+      #' `process` executes a transformation method and returns the transformed backend.
+      #'
+      #'  Here is where the implementation goes.
       process_read = function(data, params) {
          return(data)
       },
       
+      
+      #' @description Execution wrapper: write
+      #' @param backend `MsBackendMapping` to execute the metadata mapping step on
+      #' `execute` is the wrapper around `process`.
+      #' If there are `params`, i.e. multiple steps are executed, `execute` loops through them.
+      #' (The basic settings are updated with params, then the action is run.)
+      #' If there are no params, only a single step is executed (with the "basic" settings.)
       execute_write = function(backend) {
          #log_info("executing action: {self$name}")
          if(!is.null(self$settings$params)) {
@@ -136,15 +233,23 @@ MetadataActionBase <- R6::R6Class(
          }
          return(backend)
       },
-      # `process` executes a transformation method and returns the transformed backend.
-      # Here is where the implementation goes.
+      
+      #' @description Action implementation
+      #' @param data `MsBackendMapping` to execute the metadata mapping step on
+      #' @param params List of parameters for a single action (one `params` entry fully merged.)
+      #' `process` executes a transformation method and returns the transformed backend.
+      #'
+      #'  Here is where the implementation goes.
       process_write = function(data, params) {
          return(data)
       },
       
    
-      # Set settings and verify that they are OK
-      # Any action may/should check settings for consistency
+      #' @description Set settings and verify that they are OK
+      #' 
+      #' Any action may/should check settings for consistency
+      #' 
+      #' @param settings List of settings, subclass-specific
       set_settings = function(settings) {
          self$settings <- do.call(list_modify, 
                                   c(list(self$base_settings), 
@@ -158,7 +263,8 @@ MetadataActionBase <- R6::R6Class(
          # }
       },
    
-      # Update settings with step-specific entry
+      #' @description Update settings with step-specific entry
+      #' @param param_settings A `params` entry from `settings`, i.e. a single action step.
       merge_settings = function(param_settings) {
          settings_ <- self$settings
          settings_[["params"]] <- NULL
@@ -185,10 +291,6 @@ MetadataActionBase <- R6::R6Class(
 #' 
 #' @details 
 #' 
-#' `source`: field of origin
-#' `target`: target field
-#' `explicit`: If `TRUE`, a star marker is required to register the output field as a `spectraVariable`.
-#'   This is `FALSE` by default, since the main purpose of this action is mapping input to `spectraVariable`s.
 #' 
 #' @examples
 #' 
@@ -196,15 +298,26 @@ MetadataActionBase <- R6::R6Class(
 #' backend <-  get_proto_backend(FIELD=c('1','2','3'))
 #' mapped <- mapping$execute_read(backend)
 #' 
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
 MetadataActionMapping <- R6::R6Class(
       "MetadataActionMapping",
       inherit = MetadataActionBase,
       public = list(
+         
+      #' @field base_settings
+      #' 
+      #' `source`: field of origin
+      #' `target`: target field
+      #' `explicit`: If `TRUE`, a star marker is required to register the output field as a `spectraVariable`.
+      #'   This is `FALSE` by default, since the main purpose of this action is mapping input to `spectraVariable`s.
       base_settings = list(
          source = '',
          target = '',
          explicit = FALSE
       ),
+      
+      #' @description read implementation
       process_read = function(data, params) {
          source <- .v(params$source)
          target <- .v(params$target)
@@ -217,6 +330,8 @@ MetadataActionMapping <- R6::R6Class(
          }
          return(data)
       },
+      
+      #' @description write implementation
       process_write = function(data, params) {
          source <- .v(params$source)
          target <- .v(params$target)
@@ -284,6 +399,8 @@ MetadataActionMapping <- R6::R6Class(
 #' fw@@variables <- fw@@variables %>% select(-CHNAME)
 #' bw <- crossmap$execute_write(fw)
 #' 
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
 MetadataActionCrossmap <- R6::R6Class(
    "MetadataActionCrossmap",
    inherit = MetadataActionBase,
@@ -297,6 +414,7 @@ MetadataActionCrossmap <- R6::R6Class(
          reverse = FALSE
       ),
       
+      #' @description read implementation
       process_read = function(data, params) {
          
          source <- .v(params$source)
@@ -337,6 +455,8 @@ MetadataActionCrossmap <- R6::R6Class(
          data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
          return(data)
       },
+      
+      #' @description write implementation
       process_write = function(data, params) {
          
          source <- .v(params$source)
@@ -398,6 +518,9 @@ MetadataActionCrossmap <- R6::R6Class(
 #' fw <- action$execute_read(backend)
 #' fw@@variables <- fw@@variables %>% select(-RT)
 #' bw <- action$execute_write(fw)
+#' 
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
 MetadataActionExtract <- R6::R6Class(
    "MetadataActionExtract",
    inherit = MetadataActionBase,
@@ -412,6 +535,7 @@ MetadataActionExtract <- R6::R6Class(
       convert = FALSE
    ),
    
+   #' @description read implementation
    process_read = function(data, params) {
       
       source <- .v(params$source)
@@ -434,6 +558,8 @@ MetadataActionExtract <- R6::R6Class(
       
       return(data)
    },
+   
+   #' @description write implementation
    process_write = function(data, params) {
       
       source <- .v(params$source)
@@ -498,10 +624,14 @@ MetadataActionExtract <- R6::R6Class(
 #' fw <- action$execute_read(backend)
 #' fw@@variables <- fw@@variables %>% select(-PKANNOT)
 #' bw <- action$execute_write(fw)
+#' 
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
 MetadataActionTabular <- R6::R6Class(
    "MetadataActionTabular",
    inherit = MetadataActionBase,
    public = list(
+      
       
       base_settings = list(
          source = '',
@@ -516,6 +646,8 @@ MetadataActionTabular <- R6::R6Class(
          extra = "merge"
       ),
       
+      
+      #' @description read implementation
       process_read = function(data, params) {
          
          source <- .v(params$source)
@@ -581,6 +713,8 @@ MetadataActionTabular <- R6::R6Class(
          
          return(data)
       },
+      
+      #' @description write implementation
       process_write = function(data, params) {
          
          source <- .v(params$source)
@@ -611,7 +745,32 @@ MetadataActionTabular <- R6::R6Class(
       }
    ))
 
-#'
+#' Metadata action: mutate
+#' 
+#' Generate a new field from an old field and optional helper fields.
+#' This uses `glue` expressions. 
+#' TODO: By default, only a limited set of functions should be
+#' available, since this otherwise allows arbitrary code execution
+#' from a metadata transformation schema.
+#' See https://stackoverflow.com/questions/66174947/r-glue-with-limited-set-of-functions-allowed-in-pattern/66177581#66177581
+#' Continue on `glue_restricted` above.
+#' 
+#' @examples 
+#' backend <- get_proto_backend(temp_rt = c(4,5,6,40,50,60),
+#'                              temp_rt_factor = c(1,1,1,60,60,60))
+#' action <- get_proto_action(
+#'    "mutate",
+#'    source = "temp_rt",
+#'    target = "*rtime",
+#'    read = "{temp_rt / temp_rt_factor}",
+#'    write = "{rtime * temp_rt_factor}"
+#' )
+#' fw <- action$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(-temp_rt)
+#' bw <- action$execute_write(fw)
+#' 
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
 MetadataActionMutate <- R6::R6Class(
    "MetadataActionMutate",
    inherit = MetadataActionBase,
@@ -622,9 +781,11 @@ MetadataActionMutate <- R6::R6Class(
          target = c(),
          read = '',
          write = '',
-         trim = FALSE
+         trim = FALSE,
+         convert = TRUE
       ),
       
+      #' @description read implementation
       process_read = function(data, params) {
          
          source <- .v(params$source)
@@ -634,16 +795,21 @@ MetadataActionMutate <- R6::R6Class(
          data@variables <- data@variables %>%
             mutate(!!target := glue(params$read))
          
-         if(params$trim) {
-               t_sym <- sym(target)
+         t_sym <- sym(target)
+         if(params$trim)
                data@variables <- data@variables %>%
                   mutate(!!target := str_trim(!!t_sym))
-         }
+         
+         if(params$convert)
+            data@variables <- data@variables %>%
+               mutate(!!target := type.convert(!!t_sym))
          
          data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
          
          return(data)
       },
+      
+      #' @description write implementation
       process_write = function(data, params) {
          
          source <- .v(params$source)
@@ -653,12 +819,61 @@ MetadataActionMutate <- R6::R6Class(
          data@variables <- data@variables %>%
             mutate(!!source := glue(params$write))
          
+         s_sym <- sym(source)
+         
+         if(params$convert)
+            data@variables <- data@variables %>%
+            mutate(!!source := type.convert(!!s_sym))
+         
          data@sourceVariables <- union(data@sourceVariables, set_source_var)
          
          return(data)
       }
    ))
 
+#' Metadata action: translate
+#' 
+#' Performs a dictionary-style translation action for an entry.
+#' In the reading direction, multiple entries may be mapped to one output value;
+#' in the writing direction, a single value needs to be specified.
+#' If `coalesce` is set, untranslated values will be copied verbatim.
+#' 
+#' @examples
+#' 
+#' backend <- get_proto_backend(MS_TYPE = c("POSITIVE", "P", "n", "gugus", NA))
+#' action <- get_proto_action(
+#'    "translate",
+#'    source = "MS_TYPE",
+#'    target = "*msLevel",
+#'    dictionary = list(
+#'    list(value = 1, read = c("POSITIVE", "P", "p", "pos"), write = "POSITIVE"),
+#'    list(value = 0, read = c("NEGATIVE", "N", "n", "neg"), write = "NEGATIVE")
+#'    )
+#' )
+#' fw <- action$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(-MS_TYPE)
+#' 
+#' # Example with `coalesce`: 
+#' # Note that `coalesce` only works when source and destination type are equal.
+#' 
+#' backend <- get_proto_backend(MS_TYPE = c("POSITIVE", "P", "n", "gugus", NA))
+#' action <- get_proto_action(
+#'    "translate",
+#'    source = "MS_TYPE",
+#'    target = "*msLevel",
+#'    coalesce = TRUE,
+#'    dictionary = list(
+#'    list(value = "1", read = c("POSITIVE", "P", "p", "pos"), write = "POSITIVE"),
+#'    list(value = "0", read = c("NEGATIVE", "N", "n", "neg"), write = "NEGATIVE")
+#'    )
+#' )
+#' 
+#' fw <- action$execute_read(backend)
+#' fw@@variables <- fw@@variables %>% select(-MS_TYPE)
+#' bw <- action$execute_write(fw)
+#' 
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
 MetadataActionTranslate <- R6::R6Class(
    "MetadataActionTranslate",
    inherit = MetadataActionBase,
@@ -671,7 +886,7 @@ MetadataActionTranslate <- R6::R6Class(
          coalesce = FALSE
       ),
       
-      
+      #' @description read implementation
       process_read = function(data, params) {
          
          
@@ -722,7 +937,7 @@ MetadataActionTranslate <- R6::R6Class(
       },
       
       
-      
+      #' @description write implementation
       process_write = function(data, params) {
          
          
@@ -731,6 +946,7 @@ MetadataActionTranslate <- R6::R6Class(
          source_sym <- sym(source)
          target_sym <- sym(target)
          set_source_var <- source[.flag(params$source)]
+         
          
          # extract the reads from the dictionary
          dictionary_write <- params$dictionary %>% 
@@ -748,7 +964,7 @@ MetadataActionTranslate <- R6::R6Class(
          
          data@variables <- data@variables %>%
             unnest(!!target) %>%
-            left_join(dictionary_read, by = target) %>%
+            left_join(dictionary_write, by = target)
          
          # If coalesce is set, "translate" unmatched entries verbatim
          if(params$coalesce)
@@ -757,8 +973,8 @@ MetadataActionTranslate <- R6::R6Class(
          
          data@variables <- data@variables %>%
             chop(c(source, target)) %>%
-            mutate(!!source := as.list(source_sym),
-                   !!target := as.list(target_sym))
+            mutate(!!source := as.list(!!source_sym),
+                   !!target := as.list(!!target_sym))
          
          data@sourceVariables <- union(data@sourceVariables, set_source_var)
          
@@ -779,6 +995,8 @@ MetadataActionType <- R6::R6Class(
          source = c(),
          type = c()
       ),
+      
+      #' @description read implementation
       process_read = function(data, params) {
          
          if(length(params$source) > 0) {
@@ -814,8 +1032,10 @@ MetadataActionType <- R6::R6Class(
 #' 
 #' Split (in read direction) a string field into a character vector according to a separator.
 #' 
-#' @example
+#' @examples
 #'
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
 MetadataActionSplit <- R6::R6Class(
       "MetadataActionSplit",
       inherit = MetadataActionBase,
@@ -828,7 +1048,7 @@ MetadataActionSplit <- R6::R6Class(
             n = Inf
          ),
          
-         
+         #' @description read implementation
          process_read = function(data, params) {
          
             source <- .v(params$source)
@@ -848,6 +1068,7 @@ MetadataActionSplit <- R6::R6Class(
             return(data)
          },
          
+         #' @description write implementation
          process_write = function(data, params) {
             
             source <- .v(params$source)
@@ -888,7 +1109,7 @@ MetadataActionNest <- R6::R6Class(
       remove_orig = TRUE
    ),
    
-   
+   #' @description read implementation
    process_read = function(data, params) {
       
       source <- .v(params$source)
