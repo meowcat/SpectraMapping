@@ -9,7 +9,18 @@ get_glue <- function() {
   else
     return(glue_safe)
 }
+
+mapVariables <- function(sp, mapping) {
+  if(!is.list(mapping)) 
+    mapping <- read_yaml(mapping)
+  actions <- get_actions(mapping)
+  sp@backend <- reduce(actions, ~ .y$execute_read(.x), .init = sp@backend)
+  sp
+}
+
  
+
+
 load_mapping <- function(format, mapping) {
   
   format$mapping <- mapping

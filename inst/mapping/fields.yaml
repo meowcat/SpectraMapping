@@ -27,3 +27,6 @@
 -
   spectraKey: title
   dataType: list
+-
+  spectraKey: catchInexistent
+  dataType: dummy

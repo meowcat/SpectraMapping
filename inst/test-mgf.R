@@ -11,6 +11,18 @@ system.time(
     system.file("test_spectra/sample.mgf", package="SpectraMapping"),
     source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE)))
 )
+
+
+
+
+library(MsBackendMgf)
+
+system.time(
+  spMgfOrig <- Spectra(
+    system.file("test_spectra/sample.mgf", package="SpectraMapping"),
+    source = MsBackendMgf())
+)
+
 system.time(
   spMsp <- Spectra(
     system.file("test_spectra/sample.msp", package="SpectraMapping"),

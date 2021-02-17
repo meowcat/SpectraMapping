@@ -1,0 +1,128 @@
+- action: nesting
+  params:
+  - { source: '*AC$CHROMATOGRAPHY', prefix: 'CHROM@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+  - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+  - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+- action: extract
+  params: 
+  - source: 'MS@COLLISION_ENERGY'
+    target: ['*collisionEnergy', collisionEnergyUnit]
+    read: '([0-9]+)\s?(.*)'
+    write: '{collisionEnergy} {collisionEnergyUnit}'
+  - source: 'CHROM@RETENTION_TIME'
+    target: ['temp_rt', 'temp_rt_unit']
+    read: '([0-9.]+)\s?(.*)'
+    write: '{temp_rt} {temp_rt_unit}'
+    convert: TRUE
+    trim: TRUE
+# Handle retention times
+- action: translate
+  params:
+  - source: 'temp_rt_unit'
+    target: '*rtime_conversion_factor'
+    dictionary:
+    - {value: 60, read: 'min', write: 'min'}
+    - {value: 1, read: 'sec', write: 'sec'}
+  - source: 'MS@MS_TYPE'
+    target: '*msLevel'
+    dictionary:
+    - {value: 1, read: MS1, write: MS1}
+    - {value: 2, read: MS2, write: MS2}
+    - {value: 3, read: MS3, write: MS3}
+  - source: 'MS@ION_MODE'
+    target: '*polarity'
+    dictionary:
+    - {value: 1, read: ['POSITIVE', 'positive'], write: 'POSITIVE'}
+    - {value: 0, read: ['NEGATIVE', 'negative'], write: 'NEGATIVE'}
+- action: type
+  field: [temp_rt, rtime_conversion_factor]
+  type: numeric
+- action: mutate
+  params:
+  - source: 'temp_rt'
+    target: '*rtime'
+    read: '{temp_rt * rtime_conversion_factor}'
+    write: '{rtime / rtime_conversion_factor}'
+# Handle the annotation table
+- action: tabular
+  source: 'PK$ANNOTATION'
+  sep: ' '
+  header: 1
+  convert: TRUE
+# Handle the comment and data processing section
+- action: tabular
+  regex: '(.*?)\s(.*)'
+  params:
+  - source: 'COMMENT'
+    target: '*comments'
+  - source: 'MS$DATA_PROCESSING'
+    target: '*dataProcessing'
+- action: mapping
+  params:
+  - { source: 'ACCESSION', target: 'accession' }
+  - { source: 'RECORD_TITLE', target: 'title' }
+  - { source: 'DATE', target: 'date' }
+  - { source: 'AUTHORS', target: 'authors' }
+  - { source: 'LICENSE', target: 'license' }
+  - { source: 'COPYRIGHT', target: 'copyright' }
+  - { source: 'CH$NAME', target: 'synonyms' }
+  - { source: 'CH$COMPOUND_CLASS', target: 'compoundClass' }
+  - { source: 'CH$FORMULA', target: 'formula' }
+  - { source: 'CH$EXACT_MASS', target: 'exactmass' }
+  - { source: 'CH$SMILES', target: 'smiles' }
+  - { source: 'CH$IUPAC', target: 'inchi' }
+  - { source: 'LINK@CAS', target: 'cas' }
+  - { source: 'LINK@PUBCHEM', target: 'pubchem' }
+  - { source: 'LINK@INCHIKEY', target: 'inchikey' }
+  - { source: 'AC$INSTRUMENT', target: 'instrument' }
+  - { source: 'AC$INSTRUMENT_TYPE', target: 'instrument_type' }
+  - { source: 'MS@FRAGMENTATION_MODE', target: 'fragmentation_mode' }
+  - { source: 'MS@RESOLUTION', target: 'resolution' }
+  - { source: 'CHROM@COLUMN_NAME', target: 'columnName' }
+  - { source: 'CHROM@FLOW_GRADIENT', target: 'gradient' }
+  - { source: 'CHROM@FLOW_RATE', target: 'flowRate' }
+  - { source: 'ION@PRECURSOR_M/Z', target: "precursorMz" }
+  - { source: 'ION@BASE_PEAK', target: 'basePeak' }
+  - { source: 'ION@PRECURSOR_TYPE', target: 'ionization' }
+  - { source: 'PK$SPLASH', target: 'splash' }
+  - { source: 'PK$ANNOTATION', target: 'annotations' }
+- action: type
+  defaults: TRUE
+  params:
+  - { field: 'accession', type: 'character' }
+  - { field: 'title', type: 'character' }
+  - { field: 'date', type: 'character' }
+  - { field: 'authors', type: 'character' }
+  - { field: 'license', type: 'character' }
+  - { field: 'copyright', type: 'character' }
+  - { field: 'compoundClass', type: 'character' }
+  - { field: 'formula', type: 'character' }
+  - { field: 'exactmass', type: 'numeric' }
+  - { field: 'smiles', type: 'character' }
+  - { field: 'inchi', type: 'character' }
+  - { field: 'cas', type: 'character' }
+  - { field: 'pubchem', type: 'character' }
+  - { field: 'inchikey', type: 'character' }
+  - { field: 'instrument', type: 'character' }
+  - { field: 'instrument_type', type: 'character' }
+  - { field: 'fragmentation_mode', type: 'character' }
+  - { field: 'resolution', type: 'character' }
+  - { field: 'columnName', type: 'character' }
+  - { field: 'gradient', type: 'character' }
+  - { field: 'flowRate', type: 'character' }
+  - { field: 'basePeak', type: 'numeric' }
+  - { field: 'ionization', type: 'character' }
+  - { field: 'splash', type: 'character' }
+
+#colnames(d)
+# [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"            
+# [6] "dataOrigin"              "centroided"              "smoothed"                "polarity"                "precScanNum"            
+#[11] "precursorMz"             "precursorIntensity"      "precursorCharge"         "collisionEnergy"         "isolationWindowLowerMz" 
+#[16] "isolationWindowTargetMz" "isolationWindowUpperMz"  "spectrum_id"             "spectrum_name"           "date"                   
+#[21] "authors"                 "license"                 "copyright"               "publication"             "splash"                 
+#[26] "compound_id"             "adduct"                  "ionization"              "ionization_voltage"      "fragmentation_mode"     
+#[31] "collision_energy_text"   "instrument"              "instrument_type"         "formula"                 "exactmass"              
+#[36] "smiles"                  "inchi"                   "inchikey"                "cas"                     "pubchem"                
+#[41] "synonym"                 "precursor_mz_text"       "compound_name"          
+

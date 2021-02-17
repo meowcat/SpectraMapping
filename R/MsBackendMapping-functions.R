@@ -268,7 +268,8 @@
 .transform_function <- list(
  "integer" = as.integer,
  "numeric" = as.numeric,
- "character" = as.character
+ "character" = as.character,
+ "list" = as.list
  #"CharacterList" = function(x) as(x, "CharacterList")
 )
 

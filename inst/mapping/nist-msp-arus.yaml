@@ -1,0 +1,35 @@
+- action: split
+  source: Comment
+  read: '\s'
+  write: ' '
+  target: Comment_
+- action: nesting
+  source: Comment_
+  prefix: 'COM@'
+  read: '(.*?)=(.*)'
+  write: '{key}={value}'
+- action: extract
+  source: Collision_energy
+  target: ['*collisionEnergy', 'collisionEnergyUnit']
+  read: '([0-9]+)\s?(.*)'
+  write: '{collisionEnergy} {collisionEnergyUnit}'
+- action: translate
+  source: Ion_mode
+  target: polarity
+  dictionary:
+  - {value: 1, read: 'P', write: 'P'}
+  - {value: 0, read: 'N', write: 'N'}
+- action: mapping
+  params:
+  - { source: 'Name', target: 'title'}
+  - { source: 'COM@RT', target: 'rtime'}
+  - { source: 'Synon', target: 'synonyms'}
+  - { source: 'ExactMass', target: 'exactmass'}
+  - { source: 'PrecursorMZ', target: 'precursorMz'}
+  - { source: 'Precursor_type', target: 'ionization' }
+- action: default
+  params:
+  - { target: '*msLevel', read: 2 }
+  - { target: 'precursorCharge', read: 1 }
+- action: type
+  defaults: TRUE

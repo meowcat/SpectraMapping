@@ -575,6 +575,86 @@ MetadataActionExtract <- R6::R6Class(
    }
 ))
 
+#' Metadata action: default
+#' 
+#' Sets a default value, on read and/or write, if no value is present for a particular column
+#' Creates a column if no column exists.
+#' Can be used on read (target), write (source) or both.
+#' 
+#' @examples 
+#' backend <- get_proto_backend(
+#'    readCol = list("POSITIVE", c(NA_character_), "n", "gugus", NA_character_),
+#'    WRITE_COL = list("value", NA_character_, "value", "otherValue", c())
+#' )
+#' action <- get_proto_action(
+#'    "default",
+#'    params = list(
+#'       c(target = 'default_new_read_col', read = 'new_read'),
+#'       c(target = 'readCol', read = 'pos_default'),
+#'       c(source = 'WRITE_COL', write = 'default'),
+#'       c(source = 'WRITE_NEW_COL', write = 'one_value')
+#' 
+#'    )
+#' )
+#' fw <- action$execute_read(backend)
+#' bw <- action$execute_write(fw)
+MetadataActionDefault <- R6::R6Class(
+   "MetadataActionDefault",
+   inherit = MetadataActionBase,
+   public = list(
+      
+      base_settings = list(
+         source = c(),
+         target = c(),
+         read = '',
+         write = ''
+      ),
+      
+      #' @description read implementation
+      process_read = function(data, params) {
+         
+         
+         target <- .v(params$target)
+         set_spectra_var <- target[.flag(params$target)] # may be multiple vars
+         
+         if(length(target) > 0) {
+            
+            if(target %in% colnames(data@variables))
+               data@variables[[target]] <- data@variables[[target]] %>%
+                  modify_if(~ length(.x) == 0, ~ NA_character_) %>%
+                  modify_if(~ all(is.na(.x)), ~ params$read) 
+            else
+               data@variables[[target]] <- rep(params$read, nrow(data@variables)) %>% as.list()
+   
+            data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
+         }
+         
+         return(data)
+      },
+      
+      #' @description write implementation
+      process_write = function(data, params) {
+         
+         source <- .v(params$source)
+         set_source_var <- source[.flag(params$source)]
+         
+         if(length(source) > 0)
+         {
+            
+            if(source %in% colnames(data@variables))
+               data@variables[[source]] <- data@variables[[source]] %>%
+                  modify_if(~ length(.x) == 0, ~ NA_character_) %>%
+                  modify_if(~ all(is.na(.x)), ~ params$write) 
+            else
+               data@variables[[source]] <- rep(params$write, nrow(data@variables)) %>% as.list()
+            
+            data@sourceVariables <- union(data@sourceVariables, set_source_var)
+         }
+         return(data)
+      }
+   ))
+
+
 #' Metadata action: tabular
 #' 
 #' Converts a metadata column into a column of data frames. This can be used
@@ -802,7 +882,7 @@ MetadataActionMutate <- R6::R6Class(
          
          if(params$convert)
             data@variables <- data@variables %>%
-               mutate(!!target := type.convert(!!t_sym))
+               mutate(!!target := type.convert(!!t_sym, as.is = TRUE))
          
          data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
          
@@ -984,7 +1064,21 @@ MetadataActionTranslate <- R6::R6Class(
    )
 )
 
-
+#' Metadata action: type
+#' 
+#' Convert a list column into a typed column.
+#' 
+#' @examples 
+#' backend <- get_proto_backend(
+#'    MS_TYPE = list("POSITIVE", c(NA_character_), "n", "gugus", NA_character_)
+#' )
+#' action <- get_proto_action(
+#'    "type",
+#'    field = "MS_TYPE",
+#'    type = "character"
+#' )
+#' fw <- action$execute_read(backend)
+#' bw <- action$execute_write(backend)
 MetadataActionType <- R6::R6Class(
    "MetadataActionType",
    inherit = MetadataActionBase,
@@ -992,15 +1086,15 @@ MetadataActionType <- R6::R6Class(
    public = list(
       base_settings = list(
          defaults = TRUE,
-         source = c(),
+         field = c(),
          type = c()
       ),
       
       #' @description read implementation
       process_read = function(data, params) {
-         
-         if(length(params$source) > 0) {
-            for(s in params$source) {
+
+         if(length(params$field) > 0) {
+            for(s in params$field) {
                s_sym <- sym(s)
                data@variables <- data@variables %>%
                   mutate(!!s := .transform_function[[params$type]](!!s_sym))
@@ -1024,6 +1118,37 @@ MetadataActionType <- R6::R6Class(
             return(data)     
          }
          
+      },
+      
+      
+      #' @description write implementation
+      process_write = function(data, params) {
+         
+         if(length(params$field) > 0) {
+            for(s in params$field) {
+               s_sym <- sym(s)
+               data@variables <- data@variables %>%
+                  mutate(!!s := as.list(!!s_sym))
+            }
+            return(data)   
+         }
+         
+         if(params$defaults) {
+            data@variables <- data@fields %>%
+               rowwise() %>%
+               group_split() %>%
+               reduce(function(data_, field) {
+                  field_ <- as.list(field)
+                  col <- sym(field_$spectraKey)
+                  fun <- .transform_function[[field_$dataType]]
+                  if(field_$spectraKey %in% data@spectraVariables)
+                     data_ <- data_ %>%
+                     mutate(!!col := as.list(!!col))
+                  return(data_)
+               }, .init = data@variables)
+            return(data)     
+         }
+         
       }
    )
 )
@@ -1033,6 +1158,20 @@ MetadataActionType <- R6::R6Class(
 #' Split (in read direction) a string field into a character vector according to a separator.
 #' 
 #' @examples
+# backend <- get_proto_backend(Comment = list("Hans=Gammel, Fritz=Foerster,Max=gurke", "", "RT=5.2", "nomatch", c()))
+# action <- get_proto_action(
+#    "split",
+#    source = "Comment",
+#    target = "Comments",
+#    read = ',\\s?',
+#    write = ', ',
+#    trim = FALSE
+#    )
+# 
+# fw <- action$execute_read(backend)
+# fw@variables <- fw@variables %>% select(-Comment)
+# bw <- action$execute_write(fw)
+#'
 #'
 #' @param data `MsBackendMapping` to execute the metadata mapping step on
 #' @param params List of parameters for a single action (one `params` entry fully merged.)
@@ -1042,9 +1181,11 @@ MetadataActionSplit <- R6::R6Class(
       
       public = list(
          base_settings = list(
-            source = '',
-            sep = c(),
-            regex = c(),
+            source = c(),
+            target = c(),
+            read = c(),
+            write = c(),
+            trim = TRUE,
             n = Inf
          ),
          
@@ -1059,11 +1200,13 @@ MetadataActionSplit <- R6::R6Class(
             target <- .v(target_)
             set_spectra_var <- target[.flag(target_)]
             
-            if(length(params$sep) > 0)
-               pattern <- fixed(params$sep)
-            else
-               pattern <- params$sep
-            data@variables[[target]] <- data@variables[[source]] %>% str_split(pattern)
+
+            pattern <- params$read
+            data@variables[[target]] <- data@variables[[source]] %>% 
+               modify_if(~ length(.x) == 0, ~ NA_character_) %>%
+               str_split(pattern)
+            if(params$trim)
+               data@variables[[target]] <- data@variables[[target]] %>% map(str_trim)
             data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
             return(data)
          },
@@ -1082,8 +1225,9 @@ MetadataActionSplit <- R6::R6Class(
             # if(length(params$sep) > 0)
             #    pattern <- fixed(params$sep)
             # else
-            pattern <- params$sep
-            data@variables[[source]] <- data@variables[[target]] %>% map(str_flatten, pattern)
+            pattern <- params$write
+            data@variables[[source]] <- data@variables[[target]] %>% 
+               modify_if(~ length(.x) > 0, ~ str_flatten(.x, pattern))
             data@sourceVariables <- union(data@sourceVariables, set_source_var)
             return(data)
          }
@@ -1093,7 +1237,33 @@ MetadataActionSplit <- R6::R6Class(
 )
          
 
-
+#' Metadata action: nesting
+#' 
+#' Convert a list of "key-value pair" strings (e.g. MassBank subtags) to prefixed columns.
+#'
+#' @param data `MsBackendMapping` to execute the metadata mapping step on
+#' @param params List of parameters for a single action (one `params` entry fully merged.)
+#'
+# backend <- get_proto_backend(
+#    a=c(1,2,3, 4),
+#    ms = list(
+#       list("ION 4", "BLUB 5", "GAGA six"),
+#       list("ION 7", "BLUB 8", "GAGA nine"),
+#       list("ION 10", "BLUB eleven", "NOGAGAHERE 10000"),
+#       list("BLUB 12", "GAGA thirteen")
+#    ),
+#    c = c("a", "b", "c", "d")
+# )
+# action <- get_proto_action(
+#    "nesting",
+#    source = "ms",
+#    prefix = "MS_",
+#    read = "(.*?)\\s(.*)",
+#    write = "{key} {value}"
+#    )
+# fw <- action$execute_read(backend)
+# fw@variables <- fw@variables %>% select(-ms)
+# bw <- action$execute_write(fw)
 MetadataActionNest <- R6::R6Class(
    "MetadataActionNest",
    inherit = MetadataActionBase,
@@ -1128,12 +1298,48 @@ MetadataActionNest <- R6::R6Class(
                 names_from = "key", 
                 names_prefix = prefix, 
                 values_from = "value",
-                values_fn = list)
-      ) %>% unnest(cols = params$temp_col)
+                values_fn = list,
+                values_fill = NA)
+         ) %>% 
+         unnest(cols = params$temp_col) %>%
+         mutate(across(starts_with(prefix), 
+                       ~ modify_if(.x, ~length(.x) == 0, ~ NA_character_)
+                       ))
+         
       
       if(set_spectra_var) {
          cols_new <- colnames(data@variables) %>% keep(~str_starts(fixed(prefix))) %>% map_chr(~.x)
          data@spectraVariables <- union(data@spectraVariables, cols_new)
+      }
+      
+      
+      return(data)
+   },
+   
+   #' @description write implementation
+   process_write = function(data, params) {
+      
+      source <- .v(params$source)
+      prefix <- .v(params$prefix)
+      source_sym <- sym(source)
+      
+      stopifnot(length(params$prefix) == 1)
+      set_source_var <- .flag(params$source)
+      
+      data@variables <- data@variables %>%
+         mutate(across(starts_with(prefix), as.character)) %>%
+         nest(cols = starts_with(prefix)) %>%
+         mutate(cols = cols %>%
+                   map(
+                      pivot_longer,
+                      everything(),
+                      names_to = "key",
+                      values_to = "value") %>%
+                  map(~ .x %>% filter(!is.na(value)) %>% glue_data(params$write))) %>%
+         rename(!!source := cols)
+      
+      if(set_source_var) {
+         data@spectraVariables <- union(data@spectraVariables, source)
       }
       
       
@@ -1154,6 +1360,8 @@ MetadataActionNest <- R6::R6Class(
    crossmap = MetadataActionCrossmap,
    type = MetadataActionType,
    mutate = MetadataActionMutate,
-   tabular = MetadataActionTabular
+   tabular = MetadataActionTabular,
+   split = MetadataActionSplit,
+   default = MetadataActionDefault
 )
 
