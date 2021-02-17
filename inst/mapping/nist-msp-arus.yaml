@@ -3,11 +3,18 @@
   read: '\s'
   write: ' '
   target: Comment_
+- action: mapping
+  explicit: true
+  source: Comment_
+  target: Comment_Table
 - action: nesting
   source: Comment_
   prefix: 'COM@'
   read: '(.*?)=(.*)'
   write: '{key}={value}'
+- action: tabular
+  source: Comment_Table
+  regex: '(.*?)=(.*)'
 - action: extract
   source: Collision_energy
   target: ['*collisionEnergy', 'collisionEnergyUnit']
@@ -27,6 +34,7 @@
   - { source: 'ExactMass', target: 'exactmass'}
   - { source: 'PrecursorMZ', target: 'precursorMz'}
   - { source: 'Precursor_type', target: 'ionization' }
+  - { source: 'Comment_Table', target: 'comments' }
 - action: default
   params:
   - { target: '*msLevel', read: 2 }

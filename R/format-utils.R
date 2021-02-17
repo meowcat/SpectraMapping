@@ -3,178 +3,49 @@
 NULL
 
 
-get_glue <- function() {
-  if(getOption("SpectraMapping")$unsafe_glue)
-    return(glue)
-  else
-    return(glue_safe)
-}
+setGeneric("mapVariables", function(sp, ...) {
+  stop("mapVariables is not implemented for this object")
+})
 
-mapVariables <- function(sp, mapping) {
+setMethod("mapVariables", "MsBackendMapping", function(sp, mapping) {
   if(!is.list(mapping)) 
     mapping <- read_yaml(mapping)
   actions <- get_actions(mapping)
-  sp@backend <- reduce(actions, ~ .y$execute_read(.x), .init = sp@backend)
-  sp
-}
-
- 
+  sp <- reduce(actions, ~ .y$execute_read(.x), .init = sp)
+} )
 
 
-load_mapping <- function(format, mapping) {
-  
-  format$mapping <- mapping
-  # spectraMapping(mapping)
-  # format$dictionary <- spectraDictionary(mapping)
-  # format$regex <- spectraRegex(mapping)
-  # format$nesting <- spectraNesting(mapping)
-  return(format)
-}
-
-# Mapping: returns a tibble with columns
-# format_key character, spectra_key character, writable logical
-spectraMapping <- function(mapping) {
-  if(is(mapping, "MsFormatMapping"))
-    mapping_ <- mapping
-  else
-    mapping_ <- yaml.load_file(mapping)
-  # This is for the final mapping, so find the ones with a spectraKey
-  mapping_ <- mapping_ %>% 
-      keep(~!is.null(.x$spectraKey))
-  # Fill up mapping with formatKey where formatKeyRead / formatKeyWrite are not explicitely set
-  mapping_ <- mapping_ %>%
-    map( function(entry) {
-    if(is.null(entry$formatKeyRead))
-      entry$formatKeyRead <- entry$formatKey
-    if(is.null(entry$formatKeyWrite))
-      entry$formatKeyWrite <- entry$formatKey
-    entry
-  })
-  # Remove empty entries
-  mapping_read <- mapping_ %>% keep(~ length(.x$formatKeyRead) > 0)
-  mapping_write <- mapping_ %>% keep(~ length(.x$formatKeyWrite) > 0)
-  
-  mapping_dfr_read <- function(entry, type)
-  {
-    if(is.null(entry$order))
-      entry$order <- NA_integer_
-    tibble(spectraKey = rep(entry$spectraKey, length(entry$formatKeyRead)),
-           formatKey = entry$formatKeyRead,
-           type = rep("read", length(entry$formatKeyRead)),
-           selector = NA,
-           order = rep(entry$order, length(entry$formatKeyRead))
-           )
+setMethod("mapVariables", "Spectra", function(sp, mapping) {
+  if(is(sp@backend, "MsBackendMapping")) {
+    sp@backend <- mapVariables(sp@backend, mapping)
+    return(sp)
   }
-  mapping_read_ <- map_dfr(mapping_read, mapping_dfr_read)
-  
-  
-  mapping_dfr_write <- function(entry, type)
-  {
-    if(is.null(entry$order))
-      entry$order <- NA_integer_
-    tibble(spectraKey = rep(entry$spectraKey, length(entry$formatKeyWrite)),
-           formatKey = map_chr(entry$formatKeyWrite, ~.x),
-           type = rep("write", length(entry$formatKeyWrite)),
-           selector = if_else(rep(is.null(names(entry$formatKeyWrite)), length(entry$formatKeyWrite)),
-                              rep(NA_character_, length(entry$formatKeyWrite)),
-                              names(entry$formatKeyWrite)),
-           order = rep(entry$order, length(entry$formatKeyWrite))
     
-    )
-  }
-  # Move NA to the "middle" (i.e. after all front-ordered elements)
-  # and minus-orderd elements to the end, i.e. order is 1,2,4,9, NA, NA, -3, -2, -1
-  mapping_write_ <- map_dfr(mapping_write, mapping_dfr_write)
-  rbind(mapping_read_, mapping_write_)  %>%
-    mutate(order = replace_na(order, max(order, na.rm = TRUE) + 1)) %>%
-    mutate(order = if_else(order > 0, order, max(order) - min(order) + order + 1))
-}
-
-
-
-spectraDictionary <- function(mapping) {
-  
-  # Find and extract mappings that have a dictionary
-  mapping_ <- mapping %>%
-    keep(~ !is.null(.x$dictionary))
-  
-  # Find mappings that are defined for this format
-  mapping_ <- mapping_ %>% 
-    keep(~ !is.null(.x$formatKey)) %>%
-    set_names(map_chr(., "formatKey"))
-  
-  mapping_ <- mapping_ %>%
-    map("dictionary")
-  
-  
-  # Copy format to write/read if specified,
-  # then make into a tibble [formatKey, value, type, format].
-  mapping_ <- mapping_ %>%
-    map_depth(2, function(x) {
-      if(!is.null(x$format)) {
-        x$write <- x$format
-        x$read <- x$format
-      }
-      return(tribble(
-        ~ value, ~ type, ~ format,
-        x$value, "read", x$read,
-        x$value, "write", x$write
-      )) %>% unnest(format)
-    }) %>%
-    map_dfr(bind_rows, .id="formatKey")
-  if(nrow(mapping_) == 0)
-    mapping_ <- tibble(formatKey = character(), value=character(), type=character(), format=character())
-  mapping_
-}
-
-spectraNesting <- function(mapping) {
-  nestings <- mapping %>% 
-    keep(~!is.null(.x$nest)) %>%
-    map(~.x$nest %>% list_modify(formatKey = .x$formatKey))
-}
-
-spectraSplits <- function(mapping) {
-  # Find and extract mappings that have a split entry
-  mapping_ <- mapping %>%
-    keep(~ !is.null(.x$split)) %>%
-    map(~.x$split %>% list_modify(formatKey = .x$formatKey))
-}
-
-spectraRegex <- function(mapping, type = NULL) {
-  # Collect read, write or both regex types
-  if(is.null(type))
-    return(bind_rows(list(
-      spectraRegex(mapping, "read"),
-      spectraRegex(mapping, "write")
-    )))
-  if(type=="read")
-    filterFind <- "regexRead"
-  else if(type=="write")
-    filterFind <- "regexWrite"
   else
-    stop("unknown regex type")
-  
-  # Find mapping entries that are defined for this format
-  mapping_ <- mapping %>% 
-    keep(~ !is.null(.x$formatKey)) %>%
-    set_names(map_chr(., "formatKey"))
-  
-  # Find and extract mapping entries that have defined regex
-  mapping_ <- mapping_ %>% 
-    keep(~ !is.null(.x[[filterFind]])) %>%
-    map(~ .x[[filterFind]])
-  
-  mapping_ <- mapping_ %>%
-    map(bind_rows) %>% map_dfr(~ .x %>% mutate(type = type), .id="formatKey")
-  
-  if(nrow(mapping_) == 0)
-    mapping_ <- tibble(formatKey = character(), match=character(), sub=character(), type=character())
-  mapping_
-  
-}
+    stop("mapping for generic backends not yet implemented")
+} )
 
-loadSpectraMapping <- function(f) {
-  y <- yaml.load_file(f)
-  class(y) <- c(class(y), "MsFormatMapping")
-  y
-}
+
+
+setGeneric("writeVariables", function(sp, ...) {
+  stop("writeVariables is not implemented for this object")
+})
+
+
+setMethod("writeVariables", "MsBackendMapping", function(sp, mapping) {
+  if(!is.list(mapping)) 
+    mapping <- read_yaml(mapping)
+  actions <- get_actions(mapping)
+  sp <- reduce(rev(actions), ~ .y$execute_write(.x), .init = sp)
+} )
+
+
+setMethod("writeVariables", "Spectra", function(sp, mapping) {
+  if(is(sp@backend, "MsBackendMapping")) {
+    sp@backend <- writeVariables(sp@backend, mapping)
+    return(sp)
+  }
+  
+  else
+    stop("mapping for generic backends not yet implemented")
+} )

@@ -77,6 +77,7 @@
   - { source: 'LINK@INCHIKEY', target: 'inchikey' }
   - { source: 'AC$INSTRUMENT', target: 'instrument' }
   - { source: 'AC$INSTRUMENT_TYPE', target: 'instrument_type' }
+  - { source: 'MS@IONIZATION', target: 'ionization'}
   - { source: 'MS@FRAGMENTATION_MODE', target: 'fragmentation_mode' }
   - { source: 'MS@RESOLUTION', target: 'resolution' }
   - { source: 'CHROM@COLUMN_NAME', target: 'columnName' }
@@ -84,11 +85,12 @@
   - { source: 'CHROM@FLOW_RATE', target: 'flowRate' }
   - { source: 'ION@PRECURSOR_M/Z', target: "precursorMz" }
   - { source: 'ION@BASE_PEAK', target: 'basePeak' }
-  - { source: 'ION@PRECURSOR_TYPE', target: 'ionization' }
+  - { source: 'ION@PRECURSOR_TYPE', target: 'adduct' }
   - { source: 'PK$SPLASH', target: 'splash' }
   - { source: 'PK$ANNOTATION', target: 'annotations' }
 - action: type
   defaults: TRUE
+- action: type
   params:
   - { field: 'accession', type: 'character' }
   - { field: 'title', type: 'character' }

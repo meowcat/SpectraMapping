@@ -115,7 +115,7 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
               message("done")
               # Apply mapping transformations
               if(!is.null(object@format$mapping))
-                object <- .fill_variables(object)
+                object <- mapVariables(object, object@format$mapping)
               object@variables$dataStorage <- "<memory>"
               object@variables$centroided <- TRUE
               return(object)
@@ -167,7 +167,7 @@ setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
 
 
 #' @rdname hidden_aliases
-setMethod("export", "MsBackendMapping", function(object, x, file = tempfile()) {
+setMethod("export", "MsBackendMapping", function(object, x, file = "", ...) {
   
   d <- spectraData(x)
   d$mz <- mz(x)
@@ -176,8 +176,20 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile()) {
   # as it would when we setBackend
   spectraData(object) <- d
   #
-  plain <- object@format$writer(object)
-  write_lines(plain, path=file)
+  mapping <- object@format$mapping
+  if(length(mapping) > 0)
+    object <- writeVariables(object, mapping)
+  
+  object@variables %>%
+    mutate(file_ = glue(file))
+  
+  spectraFileGroups <- object@variables %>% 
+    group_by(file_) %>%
+    group_split() %>%
+    set_names(~ unique(.[[file_]]))
+    map(~ object@format$writer(.x))
+
+  iwalk(spectraFileGroups, ~ write_lines(.x, path=.y))
 })
 
 
@@ -189,8 +201,10 @@ setReplaceMethod("spectraData", "MsBackendMapping", function(object, value) {
   
   df_ <- value[, !(colnames(value) %in% c("mz", "intensity"))]
 
-  object@spectraData <- df_
-  object <- .fill_backend(object)
+  object@variables <- as_tibble(df_) # %>% rowid_to_column("spectrum_id")
+  object@spectraVariables <- colnames(df_)
+  
+  #object <- .fill_backend(object)
   if(all(c("mz", "intensity") %in% colnames(value))) {
     object <- .fill_peaks(object, value[,c("spectrum_id", "mz", "intensity")])
   }

@@ -109,7 +109,7 @@
       # read as HR spectrum
       ions <- spectrum_[spectrum_lines_split == 1] %>%
         str_match("([0-9.]+)[\\s\\t]+([0-9.]+)(.*)$") %>%
-        `[`(,c(2:4)) %>%
+        `[`(,c(2:4), drop=FALSE) %>%
         set_colnames(c("mz", "int", "annotation")) %>%
         as_tibble(.name_repair = "unique") %>%
         mutate(mz = as.numeric(mz), int = as.numeric(int))
