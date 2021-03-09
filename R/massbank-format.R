@@ -13,8 +13,8 @@ MsFormatMassbank <- function(parallel = FALSE, progress=FALSE, mapping = NULL) {
   
   format <- list(
     reader = .massbank_reader(parallel = parallel, progress=progress),
-    mapping = mapping_
-    #writer = .mgf_writer(),
+    mapping = mapping_,
+    writer = .massbank_writer()
   )
   
   class(format) <- c("MsFormat", class(format))

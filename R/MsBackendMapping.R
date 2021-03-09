@@ -169,6 +169,12 @@ setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
 #' @rdname hidden_aliases
 setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), ...) {
   
+  args <- list(...)
+  if("terminate" %in% names(args))
+    terminate <- args$terminate
+  else
+    terminate <- "no"
+  
   d <- spectraData(x)
   d$mz <- mz(x)
   d$intensity <- intensity(x)
@@ -183,15 +189,15 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), .
   object@variables <- object@variables %>%
     mutate(file_ = glue(file))
   
-  spectraFileGroups <- object@variables %>% 
-    group_by(file_) %>%
-    group_split()
-  spectraFileNames <- spectraFileGroups %>% map_chr(~ unique(.x$file_))
-  names(spectraFileGroups) <- spectraFileNames
-  return(spectraFileGroups)
-  spectraFileData <- spectraFileGroups %>%  map(~ object@format$writer(.x))
-
-  iwalk(spectraFileData, ~ write_lines(.x, path=.y))
+  backend_by_file <- split(object, object@variables$file_)
+  if(terminate == "file_split")
+    return(backend_by_file)
+  
+  export_files <- backend_by_file %>%  map(~ object@format$writer(.x))
+  if(terminate == "generate_spectra")
+    return(export_files)
+  
+  iwalk(export_files, ~ write_lines(.x, path=.y))
 })
 
 
