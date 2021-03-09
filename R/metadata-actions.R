@@ -337,11 +337,12 @@ MetadataActionMapping <- R6::R6Class(
          target <- .v(params$target)
          target_sym <- sym(target)
          set_source_var <- .flag(params$source)
-         if(params$target %in% colnames(data@variables)) {
+         if(target %in% colnames(data@variables)) {
             data@variables <- data@variables %>% mutate(!!source := !!target_sym)
             if(set_source_var)
                data@sourceVariables <- union(data@sourceVariables, source)
          }
+         return(data)
       }
 ))
 
@@ -418,6 +419,7 @@ MetadataActionCrossmap <- R6::R6Class(
       process_read = function(data, params) {
          
          source <- .v(params$source)
+         source <- source[source %in% colnames(data@variables)]
          target <- .v(params$target)
          set_spectra_var <- target[.flag(params$target)] # may be multiple vars
          
@@ -461,6 +463,7 @@ MetadataActionCrossmap <- R6::R6Class(
          
          source <- .v(params$source)
          target <- .v(params$target)
+         target <- target[target %in% colnames(data@variables)]
          set_source_var <- source[.flag(params$source)]
          
          write_split <- params$write_split
@@ -539,6 +542,10 @@ MetadataActionExtract <- R6::R6Class(
    process_read = function(data, params) {
       
       source <- .v(params$source)
+      source <- source[source %in% colnames(data@variables)]
+      if(length(source) == 0)
+         return(data)
+      
       target <- .v(params$target)
       set_spectra_var <- target[.flag(params$target)] # may be multiple vars
       
@@ -564,6 +571,9 @@ MetadataActionExtract <- R6::R6Class(
       
       source <- .v(params$source)
       target <- .v(params$target)
+      if(!all(target %in% colnames(data@variables)))
+         return(data)
+      
       set_source_var <- source[.flag(params$source)]
       
       data@variables <- data@variables %>%
@@ -607,7 +617,8 @@ MetadataActionDefault <- R6::R6Class(
          source = c(),
          target = c(),
          read = '',
-         write = ''
+         write = '',
+         type = "list"
       ),
       
       #' @description read implementation
@@ -619,12 +630,15 @@ MetadataActionDefault <- R6::R6Class(
          
          if(length(target) > 0) {
             
-            if(target %in% colnames(data@variables))
+            if(target %in% colnames(data@variables)) {
+               curr_type <- type(data@variables[[target]])
                data@variables[[target]] <- data@variables[[target]] %>%
                   modify_if(~ length(.x) == 0, ~ NA_character_) %>%
-                  modify_if(~ all(is.na(.x)), ~ params$read) 
+                  modify_if(~ all(is.na(.x)), ~ params$read) %>%
+                  as(curr_type)
+            }
             else
-               data@variables[[target]] <- rep(params$read, nrow(data@variables)) %>% as.list()
+               data@variables[[target]] <- rep(params$read, nrow(data@variables)) %>% as(params$type)
    
             data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
          }
@@ -641,12 +655,15 @@ MetadataActionDefault <- R6::R6Class(
          if(length(source) > 0)
          {
             
-            if(source %in% colnames(data@variables))
+            if(source %in% colnames(data@variables)) {
+               curr_type <- type(data@variables[[target]])
                data@variables[[source]] <- data@variables[[source]] %>%
                   modify_if(~ length(.x) == 0, ~ NA_character_) %>%
-                  modify_if(~ all(is.na(.x)), ~ params$write) 
+                  modify_if(~ all(is.na(.x)), ~ params$write) %>%
+                  as(curr_type)
+            }
             else
-               data@variables[[source]] <- rep(params$write, nrow(data@variables)) %>% as.list()
+               data@variables[[source]] <- rep(params$write, nrow(data@variables)) %>% as(params$type)
             
             data@sourceVariables <- union(data@sourceVariables, set_source_var)
          }
@@ -731,6 +748,10 @@ MetadataActionTabular <- R6::R6Class(
       process_read = function(data, params) {
          
          source <- .v(params$source)
+         if(!all(source %in% colnames(data@variables)))
+            return(data)            
+         
+         
          if(length(params$target) == 0)
             target_ <- source
          else
@@ -798,7 +819,15 @@ MetadataActionTabular <- R6::R6Class(
       process_write = function(data, params) {
          
          source <- .v(params$source)
-         target <- .v(params$target)
+         if(length(params$target) == 0)
+            target_ <- source
+         else
+            target_ <- params$target
+         target <- .v(target_)
+         
+         if(!all(target %in% colnames(data@variables)))
+            return(data)
+         
          target_sym <- sym(target)
          set_source_var <- source[.flag(params$source)]
          
@@ -842,6 +871,7 @@ MetadataActionTabular <- R6::R6Class(
 #'    "mutate",
 #'    source = "temp_rt",
 #'    target = "*rtime",
+#'    required = "temp_rt_factor"
 #'    read = "{temp_rt / temp_rt_factor}",
 #'    write = "{rtime * temp_rt_factor}"
 #' )
@@ -857,10 +887,11 @@ MetadataActionMutate <- R6::R6Class(
    public = list(
       
       base_settings = list(
-         source = '',
+         source = c(),
          target = c(),
          read = '',
          write = '',
+         required = c(),
          trim = FALSE,
          convert = TRUE
       ),
@@ -871,6 +902,12 @@ MetadataActionMutate <- R6::R6Class(
          source <- .v(params$source)
          target <- .v(params$target)
          set_spectra_var <- target[.flag(params$target)]
+         
+         if(!all(source %in% colnames(data@variables)))
+            return(data)
+         if(!all(params$required %in% colnames(data@variables)))
+            return(data)
+         
          
          data@variables <- data@variables %>%
             mutate(!!target := glue(params$read))
@@ -895,6 +932,11 @@ MetadataActionMutate <- R6::R6Class(
          source <- .v(params$source)
          target <- .v(params$target)
          set_source_var <- source[.flag(params$source)]
+         
+         if(!all(target %in% colnames(data@variables)))
+            return(data)
+         if(!all(params$required %in% colnames(data@variables)))
+            return(data)
          
          data@variables <- data@variables %>%
             mutate(!!source := glue(params$write))
@@ -976,6 +1018,9 @@ MetadataActionTranslate <- R6::R6Class(
          target_sym <- sym(target)
          set_spectra_var <- target[.flag(params$target)]
          
+         if(!all(source %in% colnames(data@variables)))
+            return(data)
+         
          # extract the reads from the dictionary
          dictionary_read <- params$dictionary %>% 
             map(~list_modify(.x, write = NULL)) %>% 
@@ -1026,6 +1071,9 @@ MetadataActionTranslate <- R6::R6Class(
          source_sym <- sym(source)
          target_sym <- sym(target)
          set_source_var <- source[.flag(params$source)]
+         
+         if(!all(target %in% colnames(data@variables)))
+            return(data)
          
          
          # extract the reads from the dictionary
@@ -1087,14 +1135,18 @@ MetadataActionType <- R6::R6Class(
       base_settings = list(
          defaults = TRUE,
          field = c(),
-         type = c()
+         type = c(),
+         omit = c()
       ),
       
       #' @description read implementation
       process_read = function(data, params) {
 
          if(length(params$field) > 0) {
-            for(s in params$field) {
+            
+            field <- params$field[params$field %in% colnames(data@variables)]
+            
+            for(s in field) {
                s_sym <- sym(s)
                data@variables <- data@variables %>%
                   mutate(!!s := .transform_function[[params$type]](!!s_sym))
@@ -1103,7 +1155,11 @@ MetadataActionType <- R6::R6Class(
          }
          
          if(params$defaults) {
-            data@variables <- data@fields %>%
+            
+            fields <- data@fields %>% filter(
+               !(spectraKey %in% params$omit))
+               
+            data@variables <- fields %>%
                rowwise() %>%
                group_split() %>%
                reduce(function(data_, field) {
@@ -1125,7 +1181,10 @@ MetadataActionType <- R6::R6Class(
       process_write = function(data, params) {
          
          if(length(params$field) > 0) {
-            for(s in params$field) {
+            
+            field <- params$field[params$field %in% colnames(data@variables)]
+            
+            for(s in field) {
                s_sym <- sym(s)
                data@variables <- data@variables %>%
                   mutate(!!s := as.list(!!s_sym))
@@ -1134,7 +1193,12 @@ MetadataActionType <- R6::R6Class(
          }
          
          if(params$defaults) {
-            data@variables <- data@fields %>%
+            
+            
+            fields <- data@fields %>% filter(
+               !(spectraKey %in% params$omit))
+               
+            data@variables <- fields %>%
                rowwise() %>%
                group_split() %>%
                reduce(function(data_, field) {
@@ -1200,6 +1264,9 @@ MetadataActionSplit <- R6::R6Class(
             target <- .v(target_)
             set_spectra_var <- target[.flag(target_)]
             
+            if(!all(source %in% colnames(data@variables)))
+               return(data)
+            
 
             pattern <- params$read
             data@variables[[target]] <- data@variables[[source]] %>% 
@@ -1221,6 +1288,10 @@ MetadataActionSplit <- R6::R6Class(
                target_ <- params$target
             target <- .v(target_)
             set_source_var <- source[.flag(params$source)] 
+            
+            if(!all(target %in% colnames(data@variables)))
+               return(data)
+            
             # 
             # if(length(params$sep) > 0)
             #    pattern <- fixed(params$sep)
@@ -1288,6 +1359,9 @@ MetadataActionNest <- R6::R6Class(
       stopifnot(length(params$prefix) == 1)
       set_spectra_var <- .flag(params$prefix)
       
+      if(!all(source %in% colnames(data@variables)))
+         return(data)
+      
       data@variables <- data@variables %>%
          select(-starts_with(prefix)) %>%
          mutate(
@@ -1326,6 +1400,10 @@ MetadataActionNest <- R6::R6Class(
       stopifnot(length(params$prefix) == 1)
       set_source_var <- .flag(params$source)
       
+      # Are there any columns to nest?
+      if(sum(str_starts(colnames(data@variables), fixed(prefix))) == 0)
+         return(data)
+      
       data@variables <- data@variables %>%
          mutate(across(starts_with(prefix), as.character)) %>%
          nest(cols = starts_with(prefix)) %>%
@@ -1334,12 +1412,13 @@ MetadataActionNest <- R6::R6Class(
                       pivot_longer,
                       everything(),
                       names_to = "key",
+                      names_prefix = prefix,
                       values_to = "value") %>%
                   map(~ .x %>% filter(!is.na(value)) %>% glue_data(params$write))) %>%
          rename(!!source := cols)
       
       if(set_source_var) {
-         data@spectraVariables <- union(data@spectraVariables, source)
+         data@sourceVariables <- union(data@sourceVariables, source)
       }
       
       

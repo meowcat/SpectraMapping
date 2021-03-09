@@ -31,6 +31,9 @@ sp_massbank <- Spectra(
                                                       mapping = "default")))
 
 
+arus_to_massbank <- sp_arus_mapped %>%
+  writeVariables(mapping = system.file("mapping/massbank.yaml", package="SpectraMapping"))
+
 export(
   sp_arus_mapped,
   MsBackendMapping(format = MsFormatMassbank(
@@ -39,8 +42,8 @@ export(
     mapping = "default"
   ))
 )
-  file = "massbank_out/{spectrum_id}.txt")
-)
+#   file = "massbank_out/{spectrum_id}.txt")
+# )
 
 
 sp_arus_msp <- Spectra(

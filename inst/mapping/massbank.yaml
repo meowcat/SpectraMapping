@@ -1,9 +1,9 @@
 - action: nesting
   params:
-  - { source: '*AC$CHROMATOGRAPHY', prefix: 'CHROM@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
-  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
-  - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
-  - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{formatKey} {value}" }
+  - { source: '*AC$CHROMATOGRAPHY', prefix: 'CHROM@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
+  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
+  - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
+  - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
 - action: extract
   params: 
   - source: 'MS@COLLISION_ENERGY'
@@ -44,6 +44,11 @@
     target: '*rtime'
     read: '{temp_rt * rtime_conversion_factor}'
     write: '{rtime / rtime_conversion_factor}'
+    required: rtime_conversion_factor
+- action: default
+  source: rtime_conversion_factor
+  write: 1
+  type: numeric
 # Handle the annotation table
 - action: tabular
   source: 'PK$ANNOTATION'
@@ -53,6 +58,7 @@
 # Handle the comment and data processing section
 - action: tabular
   regex: '(.*?)\s(.*)'
+  write: '{key} {value}'
   params:
   - source: 'COMMENT'
     target: '*comments'
@@ -60,23 +66,23 @@
     target: '*dataProcessing'
 - action: mapping
   params:
-  - { source: 'ACCESSION', target: 'accession' }
-  - { source: 'RECORD_TITLE', target: 'title' }
-  - { source: 'DATE', target: 'date' }
-  - { source: 'AUTHORS', target: 'authors' }
-  - { source: 'LICENSE', target: 'license' }
-  - { source: 'COPYRIGHT', target: 'copyright' }
-  - { source: 'CH$NAME', target: 'synonyms' }
-  - { source: 'CH$COMPOUND_CLASS', target: 'compoundClass' }
-  - { source: 'CH$FORMULA', target: 'formula' }
-  - { source: 'CH$EXACT_MASS', target: 'exactmass' }
-  - { source: 'CH$SMILES', target: 'smiles' }
-  - { source: 'CH$IUPAC', target: 'inchi' }
+  - { source: '*ACCESSION', target: 'accession' }
+  - { source: '*RECORD_TITLE', target: 'title' }
+  - { source: '*DATE', target: 'date' }
+  - { source: '*AUTHORS', target: 'authors' }
+  - { source: '*LICENSE', target: 'license' }
+  - { source: '*COPYRIGHT', target: 'copyright' }
+  - { source: '*CH$NAME', target: 'synonyms' }
+  - { source: '*CH$COMPOUND_CLASS', target: 'compoundClass' }
+  - { source: '*CH$FORMULA', target: 'formula' }
+  - { source: '*CH$EXACT_MASS', target: 'exactmass' }
+  - { source: '*CH$SMILES', target: 'smiles' }
+  - { source: '*CH$IUPAC', target: 'inchi' }
   - { source: 'LINK@CAS', target: 'cas' }
   - { source: 'LINK@PUBCHEM', target: 'pubchem' }
   - { source: 'LINK@INCHIKEY', target: 'inchikey' }
-  - { source: 'AC$INSTRUMENT', target: 'instrument' }
-  - { source: 'AC$INSTRUMENT_TYPE', target: 'instrument_type' }
+  - { source: '*AC$INSTRUMENT', target: 'instrument' }
+  - { source: '*AC$INSTRUMENT_TYPE', target: 'instrument_type' }
   - { source: 'MS@IONIZATION', target: 'ionization'}
   - { source: 'MS@FRAGMENTATION_MODE', target: 'fragmentation_mode' }
   - { source: 'MS@RESOLUTION', target: 'resolution' }
@@ -86,10 +92,11 @@
   - { source: 'ION@PRECURSOR_M/Z', target: "precursorMz" }
   - { source: 'ION@BASE_PEAK', target: 'basePeak' }
   - { source: 'ION@PRECURSOR_TYPE', target: 'adduct' }
-  - { source: 'PK$SPLASH', target: 'splash' }
-  - { source: 'PK$ANNOTATION', target: 'annotations' }
+  - { source: '*PK$SPLASH', target: 'splash' }
+  - { source: '*PK$ANNOTATION', target: 'annotations' }
 - action: type
   defaults: TRUE
+  omit: [rtime]
 - action: type
   params:
   - { field: 'accession', type: 'character' }

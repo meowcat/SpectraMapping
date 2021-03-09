@@ -167,7 +167,7 @@ setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
 
 
 #' @rdname hidden_aliases
-setMethod("export", "MsBackendMapping", function(object, x, file = "", ...) {
+setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), ...) {
   
   d <- spectraData(x)
   d$mz <- mz(x)
@@ -180,17 +180,33 @@ setMethod("export", "MsBackendMapping", function(object, x, file = "", ...) {
   if(length(mapping) > 0)
     object <- writeVariables(object, mapping)
   
-  object@variables %>%
+  object@variables <- object@variables %>%
     mutate(file_ = glue(file))
   
   spectraFileGroups <- object@variables %>% 
     group_by(file_) %>%
-    group_split() %>%
-    set_names(~ unique(.[[file_]]))
-    map(~ object@format$writer(.x))
+    group_split()
+  spectraFileNames <- spectraFileGroups %>% map_chr(~ unique(.x$file_))
+  names(spectraFileGroups) <- spectraFileNames
+  return(spectraFileGroups)
+  spectraFileData <- spectraFileGroups %>%  map(~ object@format$writer(.x))
 
-  iwalk(spectraFileGroups, ~ write_lines(.x, path=.y))
+  iwalk(spectraFileData, ~ write_lines(.x, path=.y))
 })
+
+
+#' #' @rdname MsBackendMgf
+#' setMethod("export", "MsBackendMgf", function(object, x, file = tempfile(),
+#'                                              mapping = spectraVariableMapping(),
+#'                                              ...) {
+#'   if (missing(x))
+#'     stop("Required parameter 'x' is missing. 'x' should be a 'Spectra' ",
+#'          "object with the full spectra data.")
+#'   if (!inherits(x, "Spectra"))
+#'     stop("Parameter 'x' is supposed to be a 'Spectra' object with the full",
+#'          " spectra data to be exported.")
+#'   .export_mgf(x = x, con = file, mapping = mapping)
+#' })
 
 
 #' @rdname hidden_aliases
