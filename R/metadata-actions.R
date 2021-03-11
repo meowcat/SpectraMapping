@@ -1,5 +1,6 @@
 #' @import R6
 #' @import glue
+#' @import logger
 NULL
 
 
@@ -50,7 +51,7 @@ get_proto_action <- function(action, ...) {
 
 get_actions <- function(workflow) {
    map(workflow, function(settings) {
-      message("Action: ", settings$action)
+      #message("Action: ", settings$action)
       action_module <- settings[["action"]]
       action <- .actions_registry[[action_module]]$new(
          #name = name,
@@ -174,7 +175,7 @@ MetadataActionBase <- R6::R6Class(
       #' @description Constructor
       #' @param settings List of class-specific settings which override the base settings.
       initialize = function(settings) {
-         #self$name <- name
+         self$name <- settings$action
          # Take base settings and replace with settings from user where one is provided
          self$settings <- self$base_settings
          self$set_settings(settings)
@@ -188,7 +189,8 @@ MetadataActionBase <- R6::R6Class(
       #' (The basic settings are updated with params, then the action is run.)
       #' If there are no params, only a single step is executed (with the "basic" settings.)
       execute_read = function(backend) {
-         #log_info("executing action: {self$name}")
+         time_action_start <- Sys.time()
+         self$log_level(INFO, "executing (read)")
          if(!is.null(self$settings$params)) {
             backend <- reduce(self$settings$params, function(data, params) {
                params_ <- self$merge_settings(params)
@@ -199,6 +201,10 @@ MetadataActionBase <- R6::R6Class(
          else {
             backend <- self$process_read(backend, self$settings)
          }
+         time_action_end <- Sys.time()
+         time_action <- time_action_end - time_action_start
+         time_action <- (time_action_end - time_action_start) %>% as.numeric()
+         log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
          return(backend)
       },
       
@@ -220,7 +226,9 @@ MetadataActionBase <- R6::R6Class(
       #' (The basic settings are updated with params, then the action is run.)
       #' If there are no params, only a single step is executed (with the "basic" settings.)
       execute_write = function(backend) {
-         #log_info("executing action: {self$name}")
+         time_action_start <- Sys.time()
+         self$log_level(INFO, "executing (write)")
+         
          if(!is.null(self$settings$params)) {
             backend <- reduce(rev(self$settings$params), function(data, params) {
                params_ <- self$merge_settings(params)
@@ -231,6 +239,11 @@ MetadataActionBase <- R6::R6Class(
          else {
             backend <- self$process_write(backend, self$settings)
          }
+         time_action_end <- Sys.time()
+         time_action <- (time_action_end - time_action_start) %>% as.numeric()
+         self$log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
+         
+         
          return(backend)
       },
       
@@ -549,19 +562,21 @@ MetadataActionExtract <- R6::R6Class(
       target <- .v(params$target)
       set_spectra_var <- target[.flag(params$target)] # may be multiple vars
       
-      data@variables <- data@variables %>%
-         extract(!!source, into = target, regex = params$read, 
-                 remove = FALSE, convert = params$convert)
-      if(params$trim) {
-         for(t in target) {
-            t_sym <- sym(t)
-            data@variables <- data@variables %>%
-               mutate(!!t := str_trim(!!t_sym))
+      if("read" %in% names(params)) {
+         data@variables <- data@variables %>%
+            extract(!!source, into = target, regex = params$read, 
+                    remove = FALSE, convert = params$convert)
+         if(params$trim) {
+            for(t in target) {
+               t_sym <- sym(t)
+               data@variables <- data@variables %>%
+                  mutate(!!t := str_trim(!!t_sym))
+            }   
          }
+         data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
       }
       
       
-      data@spectraVariables <- union(data@spectraVariables, set_spectra_var)
       
       return(data)
    },
@@ -576,11 +591,12 @@ MetadataActionExtract <- R6::R6Class(
       
       set_source_var <- source[.flag(params$source)]
       
-      data@variables <- data@variables %>%
-         mutate(!!source := glue(params$write))
-      
-      data@sourceVariables <- union(data@sourceVariables, set_source_var)
-      
+      if("write" %in% names(params)) {
+         data@variables <- data@variables %>%
+            mutate(!!source := glue(params$write) %>% as.list())
+         
+         data@sourceVariables <- union(data@sourceVariables, set_source_var)
+      }
       return(data)
    }
 ))
@@ -1187,7 +1203,7 @@ MetadataActionType <- R6::R6Class(
             for(s in field) {
                s_sym <- sym(s)
                data@variables <- data@variables %>%
-                  mutate(!!s := as.list(!!s_sym))
+                  mutate(!!s := as.list(as.character(!!s_sym)))
             }
             return(data)   
          }
@@ -1413,8 +1429,16 @@ MetadataActionNest <- R6::R6Class(
                       everything(),
                       names_to = "key",
                       names_prefix = prefix,
-                      values_to = "value") %>%
-                  map(~ .x %>% filter(!is.na(value)) %>% glue_data(params$write))) %>%
+                      values_to = "value"))
+      # Reorder to specified order if required
+      if("order" %in% names(params)) {
+         data@variables <- data@variables %>%
+            mutate(cols = cols %>% map(~.x[order_fixed(.x$key, ordering = params$order),]))
+      }
+      # Write out
+      data@variables <- data@variables %>%
+         mutate(cols = cols %>%
+            map(~ .x %>% filter(!is.na(value)) %>% glue_data(params$write))) %>%
          rename(!!source := cols)
       
       if(set_source_var) {

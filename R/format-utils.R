@@ -3,6 +3,13 @@
 NULL
 
 
+
+order_fixed <- function(vec, ordering) {
+  vec_as_factor <- factor(vec, levels = ordering)
+  order(vec_as_factor)
+}
+
+
 setGeneric("mapVariables", function(sp, ...) {
   stop("mapVariables is not implemented for this object")
 })

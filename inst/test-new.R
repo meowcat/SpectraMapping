@@ -22,6 +22,88 @@ sp_arus_map_directly <- Spectra(
 
 
 
+
+
+lipidblast_read <- Spectra(
+  system.file("test_spectra/lipidblast-riken-short.msp", package="SpectraMapping"),
+  source = MsBackendMapping(format = MsFormatMsp(parallel=FALSE, progress = TRUE))
+)
+
+#save(lipidblast_read, file="lipidblast.RData")
+
+load_all()
+lipidblast_map <- lipidblast_read %>%
+  mapVariables(system.file("mapping/lipidblast-riken-msp.yaml", package = "SpectraMapping"))
+
+lipidblast_map_subset <- lipidblast_map[1:100]
+library(rcdk)
+library(rinchi)
+
+#spectraData(lipidblast_map)$instrument_type <- "LC-ESI-QTOF"
+spectraData(lipidblast_map_subset)$accession <- sprintf("LB%06d", seq_along(lipidblast_map_subset))
+spectraData(lipidblast_map_subset)$date <- format(Sys.Date(), "%Y.%m.%d")
+spectraData(lipidblast_map_subset)$molecule <- 
+  parse.smiles(spectraData(lipidblast_map_subset)$smiles)
+
+spectraData(lipidblast_map_subset)$molecule_charge <- 
+  spectraData(lipidblast_map_subset)$molecule %>% 
+    map_int(get.total.charge)
+
+rewrite_charged_formula <- function(formula, charge) {
+  if(charge == 0)
+    return(formula)
+  if(charge > 0)
+    charge_sign <- rep("+", charge)
+  else
+    charge_sign <- rep("-", -charge)
+  return(glue("[{formula}]{charge_sign}"))
+}
+
+spectraData(lipidblast_map_subset)$exactmass <- map2_dbl(
+  spectraData(lipidblast_map_subset)$formula,
+  spectraData(lipidblast_map_subset)$molecule_charge,
+  ~ get.formula(.x, .y)@mass
+)
+
+spectraData(lipidblast_map_subset)$formula <-
+  map2_chr(
+    spectraData(lipidblast_map_subset)$formula,
+    spectraData(lipidblast_map_subset)$molecule_charge,
+    rewrite_charged_formula
+  )
+
+
+spectraData(lipidblast_map_subset)$inchi <- 
+  spectraData(lipidblast_map_subset)$molecule %>% map_chr(get.inchi)
+spectraData(lipidblast_map_subset)$inchikey <- 
+  spectraData(lipidblast_map_subset)$molecule %>% map_chr(get.inchi.key)
+
+spectraData(lipidblast_map_subset)$splash <- map(
+  peaksData(lipidblast_map_subset) %>% as.list(),
+  RMassBank:::getSplash
+)
+
+spectraData(lipidblast_map_subset)$molecule <- NULL
+
+
+
+lipidblast_to_massbank <- lipidblast_map_subset %>%
+  writeVariables(mapping = system.file("mapping/massbank.yaml",
+                                       package="SpectraMapping"))
+
+lipidblast_to_massbank@backend@variables -> sd
+
+export(lipidblast_map_subset,
+       MsBackendMapping(format = MsFormatMassbank(
+         parallel = FALSE,
+         progress = TRUE,
+         mapping = system.file("mapping/massbank.yaml", package="SpectraMapping")
+       )),
+       file = "X:/massbank-lb/MassBank-data/LB/{accession}.txt")
+
+
+# lb_subset <- lipidblast_to_massbank[1:100]
+
 massbank_read_test <- list.files(
   system.file("test_spectra/massbank", package="SpectraMapping"), full.names = TRUE)
 sp_massbank <- Spectra(

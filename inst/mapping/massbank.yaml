@@ -1,12 +1,13 @@
 - action: order
-  order: [ACCESSION, RECORD_TITLE. DATE, AUTHORS, LICENSE, COPYRIGHT, PUBLICATION, PROJECT, COMMENT,
+  order: [ACCESSION, RECORD_TITLE, DATE, AUTHORS, LICENSE, COPYRIGHT, PUBLICATION, PROJECT, COMMENT,
     'CH$NAME', 'CH$COMPOUND_CLASS', 'CH$FORMULA', 'CH$EXACT_MASS', 'CH$SMILES', 'CH$IUPAC', 'CH$LINK',
     'AC$INSTRUMENT', 'AC$INSTRUMENT_TYPE', 'AC$MASS_SPECTROMETRY', 'AC$CHROMATOGRAPHY', 'AC$GENERAL', 
     'MS$FOCUSED_ION', 'MS$DATA_PROCESSING', 'PK$SPLASH', 'PK$ANNOTATION', 'PK$NUM_PEAK', 'PK$PEAK']
 - action: nesting
   params:
   - { source: '*AC$CHROMATOGRAPHY', prefix: 'CHROM@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
-  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
+  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{key} {value}", 
+      order: [MS_TYPE, ION_MODE, '*'] }
   - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
   - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
 - action: extract
@@ -21,6 +22,14 @@
     write: '{temp_rt} {temp_rt_unit}'
     convert: TRUE
     trim: TRUE
+- action: extract
+  # composing RECORD_TITLE on-the-fly while writing according to specification
+  # There is no reading, the fields are redundant
+  # To do: we want to use the first CH$NAME, use split for this
+  source: '*RECORD_TITLE'
+  target: ['CH$NAME', 'AC$INSTRUMENT_TYPE', 'MS@MS_TYPE']
+  write: '{`CH$NAME`}; {`AC$INSTRUMENT_TYPE`}; {`MS@MS_TYPE`}'
+  #It consists of the values of CH$NAME; AC$INSTRUMENT_TYPE; AC$MASS_SPECTROMETRY: MS_TYPE.
 # Handle retention times
 - action: translate
   params:
@@ -41,7 +50,7 @@
     - {value: 1, read: ['POSITIVE', 'positive'], write: 'POSITIVE'}
     - {value: 0, read: ['NEGATIVE', 'negative'], write: 'NEGATIVE'}
 - action: type
-  field: [temp_rt, rtime_conversion_factor]
+  field: [temp_rt]
   type: numeric
 - action: mutate
   params:
@@ -72,7 +81,7 @@
 - action: mapping
   params:
   - { source: '*ACCESSION', target: 'accession' }
-  - { source: '*RECORD_TITLE', target: 'title' }
+  #- { source: '*RECORD_TITLE', target: 'title' }
   - { source: '*DATE', target: 'date' }
   - { source: '*AUTHORS', target: 'authors' }
   - { source: '*LICENSE', target: 'license' }
@@ -99,6 +108,7 @@
   - { source: 'ION@PRECURSOR_TYPE', target: 'adduct' }
   - { source: '*PK$SPLASH', target: 'splash' }
   - { source: '*PK$ANNOTATION', target: 'annotations' }
+  - { source: '*PK$NUM_PEAK', target: 'peaksCount' }
 - action: type
   defaults: TRUE
   omit: [rtime]
@@ -113,8 +123,8 @@
   - { field: 'compoundClass', type: 'character' }
   - { field: 'formula', type: 'character' }
   - { field: 'exactmass', type: 'numeric' }
-  - { field: 'smiles', type: 'character' }
-  - { field: 'inchi', type: 'character' }
+  # - { field: 'smiles', type: 'character' }
+  # - { field: 'inchi', type: 'character' }
   - { field: 'cas', type: 'character' }
   - { field: 'pubchem', type: 'character' }
   - { field: 'inchikey', type: 'character' }
@@ -128,6 +138,45 @@
   - { field: 'basePeak', type: 'numeric' }
   - { field: 'ionization', type: 'character' }
   - { field: 'splash', type: 'character' }
+  # - { field: 'rtime', type: 'numeric' }
+  # - { field: 'scanIndex', type: 'integer' }
+  # - { field: 'precursorMz', type: 'numeric' }
+  # - { field: 'precursorCharge', type: 'integer' }
+  # # - { field: 'msLevel', type: 'integer' }
+  # # - { field: 'polarity', type: 'integer' } No need to convert, done by dictionary
+  # - { field: 'collisionEnergy', type: 'numeric' }
+  # - { field: 'dataOrigin', type: 'character' }
+
+  
+#   -
+#   spectraKey: rtime
+#   dataType: numeric
+#   #ontologyKey: ["MS:1000894", "MSIO_0000190"]
+# -
+#   spectraKey: scanIndex
+#   dataType: integer
+# -
+#   spectraKey: precursorMz
+#   dataType: numeric
+# -
+#   spectraKey: precursorCharge
+#   dataType: integer
+# -
+#   spectraKey: msLevel
+#   dataType: integer
+#   ontologyKey: ["MS:1000511"]
+# -
+#   spectraKey: polarity
+#   dataType: integer
+# -
+#   spectraKey: collisionEnergy
+#   dataType: numeric
+# -
+#   spectraKey: dataOrigin
+#   dataType: character
+  
+  
+  
 
 #colnames(d)
 # [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"            

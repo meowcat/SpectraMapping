@@ -1,6 +1,7 @@
 #' @include hidden_aliases.R
 #' @import tidyverse
 #' @import tibble
+#' @import progress
 NULL
 
 #' @title MS data backend for mapped text files
@@ -167,7 +168,7 @@ setMethod("lengths", "MsBackendMapping", function(x, use.names = FALSE) {
 
 
 #' @rdname hidden_aliases
-setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), ...) {
+setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), progress = FALSE, ...) {
   
   args <- list(...)
   if("terminate" %in% names(args))
@@ -193,11 +194,18 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), .
   if(terminate == "file_split")
     return(backend_by_file)
   
-  export_files <- backend_by_file %>%  map(~ object@format$writer(.x))
+  pb <- NULL
+  if(progress) {
+    pb <- progress_bar$new(
+      "Generating spectra :bar :tick_rate/sec, ETA :eta",
+      total = length(object))
+  }
+  
+  export_files <- backend_by_file %>%  map(~ object@format$writer(.x, progress=pb))
   if(terminate == "generate_spectra")
     return(export_files)
   
-  iwalk(export_files, ~ write_lines(.x, path=.y))
+  iwalk(export_files, ~ write_lines(.x, file=.y))
 })
 
 

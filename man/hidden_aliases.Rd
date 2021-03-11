@@ -28,7 +28,7 @@
 
 \S4method{lengths}{MsBackendMapping}(x, use.names = FALSE)
 
-\S4method{export}{MsBackendMapping}(object, x, file = tempfile())
+\S4method{export}{MsBackendMapping}(object, x, file = tempfile(), ...)
 
 \S4method{spectraData}{MsBackendMapping}(object) <- value
 

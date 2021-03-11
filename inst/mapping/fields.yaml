@@ -25,6 +25,12 @@
   spectraKey: dataOrigin
   dataType: character
 -
+  spectraKey: smiles
+  dataType: character
+-
+  spectraKey: inchi
+  dataType: character
+-
   spectraKey: title
   dataType: list
 -

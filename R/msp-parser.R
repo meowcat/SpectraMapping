@@ -84,7 +84,7 @@
   spectrum <- function(data) {
     spectrum_ <- data %>% str_split("\n") %>% extract2(1) %>% map(~ paste0(.x, "\n"))
     #stopifnot(spectrum_[[1]])
-    spectrum_lines_split <- spectrum_ %>% str_detect("^Num peaks:.*") %>% cumsum() %>% lag(default = 0)
+    spectrum_lines_split <- spectrum_ %>% str_detect("^Num [pP]eaks:.*") %>% cumsum() %>% lag(default = 0)
     vars <- spectrum_[spectrum_lines_split == 0] %>%
       str_replace("^Synon:\\s?(\\$[0-9][0-9]) ", "\\1: ") %>% # Replace e.g. "Synon: $99 bla" with "$99: bla"
       str_match("^(.*?):\\s?(.*)$") %>%
