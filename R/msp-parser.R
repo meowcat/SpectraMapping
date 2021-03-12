@@ -82,7 +82,15 @@
   #   (ion %alt% specVariable)
   # }
   spectrum <- function(data) {
-    spectrum_ <- data %>% str_split("\n") %>% extract2(1) %>% map(~ paste0(.x, "\n"))
+    # Remove empty lines, add newline at every EOL
+
+    spectrum_ <- data %>%
+      str_split("\n") %>%
+      extract2(1) %>% 
+      keep(~ .x != "") %>%
+      map(~ paste0(.x, "\n"))
+    
+    
     #stopifnot(spectrum_[[1]])
     spectrum_lines_split <- spectrum_ %>% str_detect("^Num [pP]eaks:.*") %>% cumsum() %>% lag(default = 0)
     vars <- spectrum_[spectrum_lines_split == 0] %>%

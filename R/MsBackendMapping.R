@@ -190,9 +190,26 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), p
   object@variables <- object@variables %>%
     mutate(file_ = glue(file))
   
-  backend_by_file <- split(object, object@variables$file_)
+  # Process into a nested tibble with columns spectrum_id, file_, variables, peaks,
+  # one row per spectrum
+  variables <- object@variables %>% 
+    group_by(spectrum_id, file_) %>% 
+    nest() %>% 
+    ungroup() %>% 
+    rename(variables=data)
+  peaks <- object@peaks %>% 
+    group_by(spectrum_id) %>% 
+    nest() %>%
+    ungroup() %>% 
+    rename(peaks=data)
+  data <- left_join(variables, peaks, by="spectrum_id")
+  
+  
+  
+  data_by_file <- data %>%
+    group_by(file_)
   if(terminate == "file_split")
-    return(backend_by_file)
+    return(data_by_file)
   
   pb <- NULL
   if(progress) {
@@ -201,7 +218,12 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), p
       total = length(object))
   }
   
-  export_files <- backend_by_file %>%  map(~ object@format$writer(.x, progress=pb))
+  export_files <- data_by_file %>%  
+    group_split(.keep = FALSE) %>%
+    map(~ object@format$writer(.x, backend=object, progress=pb))
+  
+  names(export_files) <- group_keys(data_by_file)$file_
+  
   if(terminate == "generate_spectra")
     return(export_files)
   
@@ -358,7 +380,7 @@ setMethod("[", "MsBackendMapping", function(x, i, j, ..., drop = FALSE) {
   spectra_alias_gen <- .SPECTRA_DATA_COLUMNS[.spectra_alias_]
   function(object) {
     spectra_alias_sym <- sym(.spectra_alias_)
-    message(.spectra_alias_)
+    #message(.spectra_alias_)
     if(.spectra_alias_ %in% colnames(object@variables))
       return(object@variables %>% pull(spectra_alias_sym))
     #if(spectra_alias %in% .SPECTRA_DATA_COLUMNS)

@@ -29,18 +29,18 @@
 
 
 .massbank_writer <- function() {
-  .massbank_writer_ <- function(backend, progress = NULL) {
-    variables <- backend@variables %>% 
-      group_by(spectrum_id) %>% 
-      nest() %>% 
-      ungroup() %>% 
-      rename(variables=data)
-    peaks <- backend@peaks %>% 
-      group_by(spectrum_id) %>% 
-      nest() %>%
-      ungroup() %>% 
-      rename(peaks=data)
-    data <- left_join(variables, peaks, by="spectrum_id") 
+  .massbank_writer_ <- function(data, backend, progress = NULL) {
+    # variables <- backend@variables %>% 
+    #   group_by(spectrum_id) %>% 
+    #   nest() %>% 
+    #   ungroup() %>% 
+    #   rename(variables=data)
+    # peaks <- backend@peaks %>% 
+    #   group_by(spectrum_id) %>% 
+    #   nest() %>%
+    #   ungroup() %>% 
+    #   rename(peaks=data)
+    # data <- left_join(variables, peaks, by="spectrum_id") 
     file <- data %>% pmap_chr(.write_massbank_spectrum, backend = backend, progress = progress)
     return(file)
   }
