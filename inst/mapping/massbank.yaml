@@ -10,6 +10,9 @@
       order: [MS_TYPE, ION_MODE, '*'] }
   - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
   - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
+- action: default
+  source: '*CH$COMPOUND_CLASS'
+  write: 'N/A' 
 - action: extract
   params: 
   - source: 'MS@COLLISION_ENERGY'
@@ -22,14 +25,22 @@
     write: '{temp_rt} {temp_rt_unit}'
     convert: TRUE
     trim: TRUE
+- action: default
+  source: 'collisionEnergyUnit'
+  write: '' 
 - action: extract
   # composing RECORD_TITLE on-the-fly while writing according to specification
   # There is no reading, the fields are redundant
   # To do: we want to use the first CH$NAME, use split for this
   source: '*RECORD_TITLE'
-  target: ['CH$NAME', 'AC$INSTRUMENT_TYPE', 'MS@MS_TYPE']
-  write: '{`CH$NAME`}; {`AC$INSTRUMENT_TYPE`}; {`MS@MS_TYPE`}'
+  target: [first_name, 'AC$INSTRUMENT_TYPE', 'MS@MS_TYPE']
+  write: '{first_name}; {`AC$INSTRUMENT_TYPE`}; {`MS@MS_TYPE`}'
   #It consists of the values of CH$NAME; AC$INSTRUMENT_TYPE; AC$MASS_SPECTROMETRY: MS_TYPE.
+- action: crossmap
+  # Extract the first name as the main name to use for composing the RECORD_TITLE
+  source: first_name
+  target: 'CH$NAME'
+  write_split: {first_name: '1'}
 # Handle retention times
 - action: translate
   params:

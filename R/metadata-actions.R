@@ -190,7 +190,8 @@ MetadataActionBase <- R6::R6Class(
       #' If there are no params, only a single step is executed (with the "basic" settings.)
       execute_read = function(backend) {
          time_action_start <- Sys.time()
-         self$log_level(INFO, "executing (read)")
+         if(getOption("SpectraMapping")$verbose >= 2)
+            self$log_level(INFO, "executing (read)")
          if(!is.null(self$settings$params)) {
             backend <- reduce(self$settings$params, function(data, params) {
                params_ <- self$merge_settings(params)
@@ -204,7 +205,8 @@ MetadataActionBase <- R6::R6Class(
          time_action_end <- Sys.time()
          time_action <- time_action_end - time_action_start
          time_action <- (time_action_end - time_action_start) %>% as.numeric()
-         log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
+         if(getOption("SpectraMapping")$verbose >= 2)
+            log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
          return(backend)
       },
       
@@ -227,7 +229,8 @@ MetadataActionBase <- R6::R6Class(
       #' If there are no params, only a single step is executed (with the "basic" settings.)
       execute_write = function(backend) {
          time_action_start <- Sys.time()
-         self$log_level(INFO, "executing (write)")
+         if(getOption("SpectraMapping")$verbose >= 2)
+            self$log_level(INFO, "executing (write)")
          
          if(!is.null(self$settings$params)) {
             backend <- reduce(rev(self$settings$params), function(data, params) {
@@ -241,7 +244,8 @@ MetadataActionBase <- R6::R6Class(
          }
          time_action_end <- Sys.time()
          time_action <- (time_action_end - time_action_start) %>% as.numeric()
-         self$log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
+         if(getOption("SpectraMapping")$verbose >= 2)
+            self$log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
          
          
          return(backend)
@@ -672,7 +676,7 @@ MetadataActionDefault <- R6::R6Class(
          {
             
             if(source %in% colnames(data@variables)) {
-               curr_type <- type(data@variables[[target]])
+               curr_type <- typeof(data@variables[[source]])
                data@variables[[source]] <- data@variables[[source]] %>%
                   modify_if(~ length(.x) == 0, ~ NA_character_) %>%
                   modify_if(~ all(is.na(.x)), ~ params$write) %>%
@@ -1429,16 +1433,19 @@ MetadataActionNest <- R6::R6Class(
       if(sum(str_starts(colnames(data@variables), fixed(prefix))) == 0)
          return(data)
       
+      .col.prefix <- prefix
+      
       data@variables <- data@variables %>%
-         mutate(across(starts_with(prefix), as.character)) %>%
-         nest(cols = starts_with(prefix)) %>%
+         mutate(across(starts_with(.col.prefix), as.character)) %>%
+         nest(cols = starts_with(.col.prefix)) %>%
          mutate(cols = cols %>%
-                   map(
-                      pivot_longer,
+                   map( ~ pivot_longer(
+                      .x,
                       everything(),
                       names_to = "key",
-                      names_prefix = prefix,
-                      values_to = "value"))
+                      names_prefix = .col.prefix,
+                      values_to = "value")
+                   ) )
       # Reorder to specified order if required
       if("order" %in% names(params)) {
          data@variables <- data@variables %>%

@@ -19,7 +19,14 @@ setMethod("mapVariables", "MsBackendMapping", function(sp, mapping) {
     mapping <- read_yaml(mapping)
   actions <- get_actions(mapping)
   sp@spectraVariables <- character(0)
+  time_action_start <- Sys.time()
+  if(getOption("SpectraMapping")$verbose >= 1)
+    log_level(INFO, "mapping variables")
   sp <- reduce(actions, ~ .y$execute_read(.x), .init = sp)
+  time_action_end <- Sys.time()
+  time_action <- (time_action_end - time_action_start) %>% as.numeric()
+  if(getOption("SpectraMapping")$verbose >= 1)
+    log_level(INFO, "mapping done, elapsed: {round(time_action, 1)} seconds")
   sp
 } )
 
@@ -45,9 +52,16 @@ setMethod("writeVariables", "MsBackendMapping", function(sp, mapping) {
   if(!is.list(mapping)) 
     mapping <- read_yaml(mapping)
   actions <- get_actions(mapping)
+  time_action_start <- Sys.time()
+  if(getOption("SpectraMapping")$verbose >= 1)
+    log_level(INFO, "mapping variables")
   sp@sourceVariables <- character(0)
   sp@variables <- sp@variables %>% select(all_of(sp@spectraVariables))
   sp <- reduce(rev(actions), ~ .y$execute_write(.x), .init = sp)
+  time_action_end <- Sys.time()
+  time_action <- (time_action_end - time_action_start) %>% as.numeric()
+  if(getOption("SpectraMapping")$verbose >= 1)
+    log_level(INFO, "mapping done, elapsed: {round(time_action, 1)} seconds")
   sp
 } )
 

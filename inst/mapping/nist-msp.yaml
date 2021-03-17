@@ -12,13 +12,18 @@
 #   prefix: 'COM@'
 #   read: '(.*?)=(.*)'
 #   write: '{key}={value}'
+- action: crossmap
+  source: [Name, Synon]
+  target: '*synonyms'
+  read_split: {synonyms: "*"}
+  write_split: {Name: '1', Synon: '*'}
 - action: tabular
   source: comments
   regex: "^(?:(\\w*)=)?(.*)$" # captures key=value or value_only, thanks Alexis
   write: "{key}{ifelse(key!='','=','')}{value}"
 - action: extract
   source: Collision_energy
-  target: ['cePrefix', '*collisionEnergy', 'collisionEnergyUnit']
+  target: ['cePrefix', '*collisionEnergy', '*collisionEnergyUnit']
   read: '(.*?)([0-9]+)\s?(.*)'
   write: '{cePrefix}{collisionEnergy} {collisionEnergyUnit}'
 - action: translate
@@ -34,16 +39,30 @@
     - {value: 1, read: 'MS1', write: 'MS1'}
     - {value: 2, read: 'MS2', write: 'MS2'}
     - {value: 3, read: 'MS3', write: 'MS3'}
+  - source: Instrument_type
+    target: 'instrument_type_ms'
+    dictionary:
+    - {value: 'QTOF', read: 'Q-TOF', write: 'Q-TOF'}
+    - {value: 'QFT', read: 'HCD', write: 'HCD'}
+    - {value: 'ITFT', read: 'IT-FT/ion trap with FTMS', write: 'IT-FT/ion trap with FTMS'}
+    #- {value: 3, read: 'MS3', write: 'MS3'}
+- action: mutate
+  source: [instrument_type_ms, Ionization]
+  target: '*instrument_type'
+  read: "{Ionization}-{instrument_type_ms}"
+  write: 
+    ionization: '{str_split_fixed(instrument_type, "-")[,1]}'
+    instrument_type_ms: '{str_split_fixed(instrument_type, "-")[,2]}'
 - action: mapping
   params:
   - { source: 'Name', target: 'title'}
   #- { source: 'COM@RT', target: 'rtime'}
-  - { source: 'Synon', target: 'synonyms'}
+  #- { source: 'Synon', target: 'synonyms'}
   - { source: 'ExactMass', target: 'exactmass'}
   - { source: 'PrecursorMZ', target: 'precursorMz'}
   - { source: 'Precursor_type', target: 'ionization' }
   - { source: 'Instrument', target: 'instrument' }
-  - { source: 'Instrument_type', target: 'instrument_type' }
+  #- { source: 'Instrument_type', target: 'instrument_type' }
   - { source: 'Sample_inlet', target: 'gradient' }
   - { source: 'Ionization', target: 'ionization' }
   - { source: 'InChIKey', target: 'inchikey' }

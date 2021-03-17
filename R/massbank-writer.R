@@ -11,7 +11,7 @@
   var_render <- var_tbl %>% glue_data("{key}: {value}")
   # Verify that NUM_PEAKS is there
   if(!("PK$NUM_PEAK" %in% names(var_print))) {
-    warning(glue("PK$NUM_PEAK missing for record {spectrum_id}. Recalculating"))
+    # warning(glue("PK$NUM_PEAK missing for record {spectrum_id}. Recalculating"))
     var_render <- c(var_render, glue("PK$NUM_PEAK: {nrow(peaks)}"))
   }
   peaks <- peaks %>% mutate(relint = pmax(1, int / max(int) * 999))
