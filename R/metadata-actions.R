@@ -647,7 +647,7 @@ MetadataActionDefault <- R6::R6Class(
          if(length(target) > 0) {
             
             if(target %in% colnames(data@variables)) {
-               curr_type <- type(data@variables[[target]])
+               curr_type <- typeof(data@variables[[target]])
                data@variables[[target]] <- data@variables[[target]] %>%
                   modify_if(~ length(.x) == 0, ~ NA_character_) %>%
                   modify_if(~ all(is.na(.x)), ~ params$read) %>%
@@ -849,7 +849,7 @@ MetadataActionTabular <- R6::R6Class(
          
          if(length(params$write) > 0)
             data@variables <- data@variables %>%
-               mutate(!!source := map(!!target_sym, ~.x %>% glue_data(params$write)) %>% as.character())
+               mutate(!!source := map(!!target_sym, ~.x %>% glue_data(params$write)))
          else {
             temp_col <- data@variables[[target]] %>% map(~.x %>% unite("col", sep=params$sep)) %>% map(~ pull(.x, "col"))
             if(params$header == 1) {
@@ -905,8 +905,8 @@ MetadataActionMutate <- R6::R6Class(
       base_settings = list(
          source = c(),
          target = c(),
-         read = '',
-         write = '',
+         #read = '',
+         #write = '',
          required = c(),
          trim = FALSE,
          convert = TRUE
@@ -954,14 +954,23 @@ MetadataActionMutate <- R6::R6Class(
          if(!all(params$required %in% colnames(data@variables)))
             return(data)
          
-         data@variables <- data@variables %>%
-            mutate(!!source := glue(params$write))
+         if("write" %in% names(params)) {
+            if(length(source) == 1)
+               data@variables <- data@variables %>%
+                  mutate(!!source := glue(params$write))
+            else
+               data@variables <- reduce(source, 
+                                        ~ .x %>% mutate(!!.y := glue(params$write[[.y]])),
+                                        .init = data@variables)
+         }
          
-         s_sym <- sym(source)
-         
-         if(params$convert)
-            data@variables <- data@variables %>%
-            mutate(!!source := type.convert(!!s_sym))
+         if(params$convert) {
+            walk(source, function(src) {
+               s_sym <- sym(src)
+               data@variables <- data@variables %>%
+                  mutate(!!src := type.convert(!!s_sym))   
+            })
+         }
          
          data@sourceVariables <- union(data@sourceVariables, set_source_var)
          

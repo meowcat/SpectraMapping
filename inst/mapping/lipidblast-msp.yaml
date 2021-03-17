@@ -1,0 +1,33 @@
+- action: extract
+  source: Comment
+  target: ['parentmass_', 'exactmass', '*name', '*ionization', '*synonym', '*formula']
+  read: 'Parent=([0-9.]+) Mz_exact=([0-9.]+) ; (.*?); (.*?); (.*?); (.*)''
+  write: 'Parent={parentmass_} Mz_exact={exactmass} ; {name}; {ionization}; {synonym}; {formula}'
+  convert: TRUE
+- action: mapping
+  params:
+  - source: PRECURSORMZ
+    target: precursorMz
+  - source: "Num Peaks"
+    target: "peaksCount"
+- action: default
+  params:
+  - { target: '*msLevel', read: 2 }
+  - { target: '*precursorCharge', read: 1 }
+  - { target: "*instrument_type", read: "LC-ESI-QTOF-SILICO"}
+  - { target: "*instrument", read: "LipidBlast"}
+  - { target: "*authors", read: "Tobias Kind, Kwang-Hyeon Liu, Do Yup Lee, Brian DeFelice, John K. Meissen, Oliver Fiehn"}
+  - { target: "*publication": read: "doi:10.1038/nmeth.2551"}
+- action: type
+  defaults: TRUE
+- action: extract
+  source: ionization
+  target: polarity_
+  read: '.*([+-])$'
+- action: translate
+  source: polarity_
+  target: '*polarity'
+  dictionary:
+  - {value: 1, read: '+', write: '+'}
+  - {value: 0, read: '-', write: '-'}
+

@@ -1,0 +1,87 @@
+- action: split
+  source: Notes
+  read: ';\s?'
+  write: '; '
+  target: '*comments'
+# - action: mapping
+#   explicit: true
+#   source: Comment_
+#   target: Comment_Table
+# - action: nesting
+#   source: Comment_
+#   prefix: 'COM@'
+#   read: '(.*?)=(.*)'
+#   write: '{key}={value}'
+- action: tabular
+  source: comments
+  regex: "^(?:(\\w*)=)?(.*)$" # captures key=value or value_only, thanks Alexis
+  write: "{key}{ifelse(key!='','=','')}{value}"
+- action: extract
+  source: Collision_energy
+  target: ['cePrefix', '*collisionEnergy', 'collisionEnergyUnit']
+  read: '(.*?)([0-9]+)\s?(.*)'
+  write: '{cePrefix}{collisionEnergy} {collisionEnergyUnit}'
+- action: translate
+  params:
+  - source: Ion_mode
+    target: '*polarity'
+    dictionary:
+    - {value: 1, read: 'P', write: 'P'}
+    - {value: 0, read: 'N', write: 'N'}
+  - source: Spectrum_type
+    target: '*msLevel'
+    dictionary:
+    - {value: 1, read: 'MS1', write: 'MS1'}
+    - {value: 2, read: 'MS2', write: 'MS2'}
+    - {value: 3, read: 'MS3', write: 'MS3'}
+- action: mapping
+  params:
+  - { source: 'Name', target: 'title'}
+  #- { source: 'COM@RT', target: 'rtime'}
+  - { source: 'Synon', target: 'synonyms'}
+  - { source: 'ExactMass', target: 'exactmass'}
+  - { source: 'PrecursorMZ', target: 'precursorMz'}
+  - { source: 'Precursor_type', target: 'ionization' }
+  - { source: 'Instrument', target: 'instrument' }
+  - { source: 'Instrument_type', target: 'instrument_type' }
+  - { source: 'Sample_inlet', target: 'gradient' }
+  - { source: 'Ionization', target: 'ionization' }
+  - { source: 'InChIKey', target: 'inchikey' }
+  - { source: 'Formula', target: 'formula' }
+  #- { source: 'MW', target: '' }
+  - { source: 'CASNO', target: 'cas' }
+  - { source: 'ID', target: 'nistid' }
+- action: default
+  params:
+  - { target: '*msLevel', read: 2 }
+  - { target: '*precursorCharge', read: 1 }
+  - { target: "*authors", read: "NIST Mass Spectrometry Data Center"}
+  - { target: "*license", read: "NIST license"}
+  - { target: "*copyright", read: "NIST Mass Spectrometry Data Center"}
+  - { target: "*prefix", read: 'N'}
+- action: type
+  params:
+  - { field: 'prefix', type: 'character' }
+  - { field: 'nistid', type: 'integer' }
+  - { field: 'exactmass', type: 'numeric' }
+
+- action: mutate
+  source: [prefix, nistid]
+  target: '*accession'
+  read: "{prefix}{sprintf('%07d', nistid)}"
+- action: type
+  defaults: TRUE  
+
+
+
+#colnames(d)
+# [1] "msLevel"                 "rtime"                   "acquisitionNum"          "scanIndex"               "dataStorage"            
+# [6] "dataOrigin"              "centroided"              "smoothed"                "polarity"                "precScanNum"            
+#[11] "precursorMz"             "precursorIntensity"      "precursorCharge"         "collisionEnergy"         "isolationWindowLowerMz" 
+#[16] "isolationWindowTargetMz" "isolationWindowUpperMz"  "spectrum_id"             "spectrum_name"           "date"                   
+#[21] "authors"                 "license"                 "copyright"               "publication"             "splash"                 
+#[26] "compound_id"             "adduct"                  "ionization"              "ionization_voltage"      "fragmentation_mode"     
+#[31] "collision_energy_text"   "instrument"              "instrument_type"         "formula"                 "exactmass"              
+#[36] "smiles"                  "inchi"                   "inchikey"                "cas"                     "pubchem"                
+#[41] "synonym"                 "precursor_mz_text"       "compound_name"          
+

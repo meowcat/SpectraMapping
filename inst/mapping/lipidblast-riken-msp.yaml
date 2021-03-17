@@ -1,0 +1,33 @@
+- action: mapping
+  params: 
+  - { source: 'NAME', target: "synonyms" }
+  - { source: 'PRECURSORMZ', target: "precursorMz" }
+  - { source: 'PRECURSORTYPE', target: "ionization" }
+  - { source: 'SMILES', target: "smiles" }
+  - { source: 'INCHIKEY', target: "inchikey" }
+  - { source: 'FORMULA', target: "formula" }
+  - { source: 'RETENTIONTIME', target: "rtime" }
+  - { source: 'CCS', target: "ccs" }
+  - { source: 'COMPOUNDCLASS', target: "compoundClass" }
+  - { source: 'FORMULA', target: "formula" }
+  - { source: 'Num Peaks', target: "peaksCount" }
+  - { source: 'Comment', target: "comment" }
+- action: default
+  params:
+  - { target: '*msLevel', read: 2 }
+  - { target: '*precursorCharge', read: 1 }
+  - { target: "*instrument_type", read: "LC-ESI-QTOF"}
+  - { target: "*instrument", read: "LipidBlast-Tsugawa-v68"}
+  - { target: "*authors", read: "Tobias Kind, Kwang-Hyeon Liu, Do Yup Lee, Brian DeFelice, John K. Meissen, Oliver Fiehn"}
+  - { target: "*publication", read: "doi:10.1038/nmeth.2551"}
+  - { target: "*license", read: "CC-BY"}
+  - { target: "*copyright", read: "Fiehn/Tsugawa"}
+- action: translate
+  source: IONMODE
+  target: '*polarity'
+  dictionary:
+  - {value: 1, read: 'Positive', write: 'Positive'}
+  - {value: 0, read: 'Negative', write: 'Negative'}
+- action: type
+  defaults: TRUE
+
