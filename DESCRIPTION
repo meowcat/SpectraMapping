@@ -40,6 +40,8 @@ Collate:
     'massbank-parser.R'
     'massbank-writer.R'
     'metadata-actions.R'
+    'metfrag-format.R'
+    'metfrag-writer.R'
     'mgf-format.R'
     'parser-utils.R'
     'mgf-parser.R'

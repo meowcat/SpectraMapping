@@ -3,6 +3,7 @@
 export(.transform_types)
 export(MsBackendMapping)
 export(MsFormatMassbank)
+export(MsFormatMetfrag)
 export(MsFormatMgf)
 export(MsFormatMsp)
 export(get_proto_action)

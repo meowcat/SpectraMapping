@@ -441,9 +441,10 @@ MetadataActionCrossmap <- R6::R6Class(
          set_spectra_var <- target[.flag(params$target)] # may be multiple vars
          
          read_split <- params$read_split
+         # if(length(read_split) == 0)
+         #    read_split <- rep("*", length(target))
          if(length(read_split) == 0)
-            read_split <- rep("*", length(target))
-         
+            return(data)
          
          
          
@@ -484,8 +485,10 @@ MetadataActionCrossmap <- R6::R6Class(
          set_source_var <- source[.flag(params$source)]
          
          write_split <- params$write_split
+         # if(length(write_split) == 0)
+         #    write_split <- rep("*", length(source))
          if(length(write_split) == 0)
-            write_split <- rep("*", length(source))
+            return(data)
          
          temp_column <- data@variables %>% 
             select(all_of(target)) %>% 
@@ -547,10 +550,10 @@ MetadataActionExtract <- R6::R6Class(
    public = list(
    
    base_settings = list(
+      # read
+      # write
       source = '',
       target = c(),
-      read = '',
-      write = '',
       trim = FALSE,
       convert = FALSE
    ),

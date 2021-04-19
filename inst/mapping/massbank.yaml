@@ -52,7 +52,7 @@
   - source: 'MS@MS_TYPE'
     target: '*msLevel'
     dictionary:
-    - {value: 1, read: MS1, write: MS1}
+    - {value: 1, read: [MS, MS1], write: MS}
     - {value: 2, read: MS2, write: MS2}
     - {value: 3, read: MS3, write: MS3}
   - source: 'MS@ION_MODE'
@@ -61,7 +61,7 @@
     - {value: 1, read: ['POSITIVE', 'positive'], write: 'POSITIVE'}
     - {value: 0, read: ['NEGATIVE', 'negative'], write: 'NEGATIVE'}
 - action: type
-  field: [temp_rt]
+  field: [temp_rt, rtime_conversion_factor]
   type: numeric
 - action: mutate
   params:
@@ -149,6 +149,8 @@
   - { field: 'basePeak', type: 'numeric' }
   - { field: 'ionization', type: 'character' }
   - { field: 'splash', type: 'character' }
+  - { field: 'adduct', type: 'character' }
+
   # - { field: 'rtime', type: 'numeric' }
   # - { field: 'scanIndex', type: 'integer' }
   # - { field: 'precursorMz', type: 'numeric' }
