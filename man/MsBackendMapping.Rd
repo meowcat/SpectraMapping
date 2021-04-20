@@ -6,7 +6,7 @@
 \alias{backendInitialize,MsBackendMapping-method}
 \title{MS data backend for mapped text files}
 \usage{
-\S4method{backendInitialize}{MsBackendMapping}(object, files, nonStop = FALSE, parallel = FALSE, ...)
+\S4method{backendInitialize}{MsBackendMapping}(object, files, data, nonStop = FALSE, parallel = FALSE, ...)
 
 MsBackendMapping(format, fields = .load_default_fields())
 }

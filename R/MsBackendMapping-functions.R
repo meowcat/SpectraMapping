@@ -109,3 +109,35 @@
 )
 
 
+#' Helper function to combine backends that base on [MsBackendMapping()].
+#'
+#' @param objects `list` of `MsBackend` objects.
+#'
+#' @return [MsBackend()] object with combined content.
+#'
+#' @author Michele Stravs with code from Johannes Rainer
+#'
+#' @importFrom MsCoreUtils vapply1c rbindFill
+#'
+#' @noRd
+.combine_backend_mapping <- function(objects) {
+    if (length(objects) == 1)
+        return(objects[[1]])
+    if (!all(vapply1c(objects, class) == class(objects[[1]])))
+        stop("Can only merge backends of the same type: ", class(objects[[1]]))
+    res <- objects[[1]]
+    res@variables <- bind_rows(map(objects, "variables"), .id = "_source_backend") %>%
+        mutate(spectrum_id_temp = paste(`_source_backend`, spectrum_id, sep="_"))
+    res@peaks <- bind_rows(map(objects, "peaks"), .id = "_source_backend") %>%
+        mutate(spectrum_id_temp = paste(`_source_backend`, spectrum_id, sep="_"))
+    spectrum_id_new <- unique(union(res@variables$spectrum_id_temp,
+                                    res@peaks$spectrum_id_temp))
+    
+    res@variables <- res@variables %>%
+        mutate(spectrum_id = match(spectrum_id_temp, spectrum_id_new)) %>%
+        select(-spectrum_id_temp, -`_source_backend`)
+    res@peaks <- res@peaks %>%
+        mutate(spectrum_id = match(spectrum_id_temp, spectrum_id_new)) %>%
+        select(-spectrum_id_temp, -`_source_backend`)
+}
+

@@ -90,39 +90,70 @@ setClass("MsBackendMapping",
 #'
 #' @rdname MsBackendMapping
 setMethod("backendInitialize", signature = "MsBackendMapping",
-          function(object, files, nonStop = FALSE, parallel = FALSE, ...) {
-              if (missing(files) || !length(files))
-                  stop("Parameter 'files' is mandatory for ", class(object))
+          function(object, files, data, nonStop = FALSE, parallel = FALSE, ...) {
+            if(!missing(files) & !missing(data))
+              stop("Either 'files' or 'data' (or none) is expected as source, but not both.")
+            
+            # Initially, initialze empty
+            object@variables <- tibble(formatKey = c(), values = c(), spectrum_id = character())
+            object@peaks <- tibble(spectrum_id = character(), mz = numeric(), int = numeric(), relint = numeric())
+            
+            if(!missing(data) & missing(files)) {
+              spectraData(object) <- data
+            }
+            else if(missing(files) & !missing(data)) {
               if (!is.character(files))
-                  stop("Parameter 'files' is expected to be a character vector",
-                       " with the files names from where data should be",
-                       " imported")
+                stop("Parameter 'files' is expected to be a character vector",
+                     " with the files names from where data should be",
+                     " imported")
               files <- normalizePath(files)
               if (any(!file.exists(files)))
-                  stop("file(s) ",
-                       paste(files[!file.exists(files)], collapse = ", "),
-                       " not found")
-              ## Import data and rbind: this produces a long-form key-value store for each spectrum
+                stop("file(s) ",
+                     paste(files[!file.exists(files)], collapse = ", "),
+                     " not found")
               message("Start data import from ", length(files), " files ... ",
                       appendLF = FALSE)
+              ## Import data and rbind: this produces a long-form key-value store for each spectrum
               res <- map(files, ~ .parse_to_kvs(object, .x)) %>% flatten()
-              object@peaks <- map_dfr(res, "ions", .id = "spectrum_id") %>% 
-                mutate(spectrum_id = as.integer(spectrum_id))
+              
+              peaks <- map_dfr(res, "ions", .id = "spectrum_id")
+              if(nrow(peaks) > 0)
+                object@peaks <- peaks
+              object@peaks <- object@peaks %>%  dplyr::mutate(spectrum_id = as.integer(spectrum_id))
+              
+              variables <- map_dfr(res, "variables", .id = "spectrum_id")
+              if(nrow(variables) > 0)
+                object@variables <- variables
+              
               # transform the long-form KVS to a table such as the one from MsBackendDataFrame
-              object@variables <- map_dfr(res, "variables", .id = "spectrum_id") %>%
-                mutate(spectrum_id = as.integer(spectrum_id)) %>%
+              object@variables <- object@variables %>%
+                dplyr::mutate(spectrum_id = as.integer(spectrum_id)) %>%
                 pivot_wider(names_from = "formatKey", values_from = "value", values_fn = list)
               object@sourceVariables <- colnames(object@variables)
-              message("done")
-              # Apply mapping transformations
-              if(!is.null(object@format$mapping))
-                object <- mapVariables(object, object@format$mapping)
-              object@variables$dataStorage <- "<memory>"
-              object@variables$centroided <- TRUE
-              return(object)
-              
+            }
             
+            message("done")
+            # Apply mapping transformations
+            if(!is.null(object@format$mapping))
+              object <- mapVariables(object, object@format$mapping)
+            object@variables$dataStorage <- "<memory>"
+            object@variables$centroided <- TRUE
+            return(object)
           })
+
+
+#' @rdname hidden_aliases
+setMethod("backendMerge", "MsBackendMapping", function(object, ...) {
+  object <- unname(c(object, ...))
+  not_empty <- lengths(object) > 0
+  if (any(not_empty))
+    res <- .combine_backend_mapping(object[not_empty])
+  else res <- object[[1L]]
+  validObject(res)
+  res
+})
+
+
 
 
 #' @rdname hidden_aliases
@@ -415,6 +446,24 @@ for(spectra_alias in .spectra_aliases_list) {
 
 
 # very valid object all the time
-setValidity("MsBackend", function(object) {
+setValidity("MsBackendMapping", function(object) {
   return(TRUE)
+})
+
+
+#' @rdname hidden_aliases
+setMethod("$", "MsBackendMapping", function(x, name) {
+  if (!any(spectraVariables(x) == name))
+    stop("spectra variable '", name, "' not available")
+  spectraData(x, name)[, 1]
+})
+
+#' @rdname hidden_aliases
+setReplaceMethod("$", "MsBackendMapping", function(x, name, value) {
+  if (is.list(value) && any(c("mz", "intensity") == name)) {
+    stop("setting peaks data via $ not yet implemented")
+  }
+  x@variables[[name]] <- value
+  validObject(x)
+  x
 })

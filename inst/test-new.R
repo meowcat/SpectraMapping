@@ -39,6 +39,14 @@ lipidblast_map_subset <- lipidblast_map[1:100]
 library(rcdk)
 library(rinchi)
 
+
+
+lipidblast_map_testcopy <- lipidblast_map_subset
+spectraData(lipidblast_map_testcopy)$segment <- seq_along(lipidblast_map_testcopy) %% 10
+spectraData(lipidblast_map_testcopy)$dataStorage <- "<memory>"
+mergy <- combineSpectra(lipidblast_map_testcopy, f = spectraData(lipidblast_map_testcopy)$segment)
+
+
 #spectraData(lipidblast_map)$instrument_type <- "LC-ESI-QTOF"
 spectraData(lipidblast_map_subset)$accession <- sprintf("LB%06d", seq_along(lipidblast_map_subset))
 spectraData(lipidblast_map_subset)$date <- format(Sys.Date(), "%Y.%m.%d")

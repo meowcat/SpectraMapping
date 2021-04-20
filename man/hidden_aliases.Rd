@@ -4,6 +4,7 @@
 \name{hidden_aliases}
 \alias{hidden_aliases}
 \alias{[,MsBackendMapping-method}
+\alias{backendMerge,MsBackendMapping-method}
 \alias{.peaksData.MsBackendMapping}
 \alias{peaksData,MsBackendMapping-method}
 \alias{intensity,MsBackendMapping-method}
@@ -14,9 +15,12 @@
 \alias{spectraData<-,MsBackendMapping-method}
 \alias{spectraData,MsBackendMapping-method}
 \alias{spectraVariables,MsBackendMapping-method}
-\alias{[,MsBackendMapping,ANY,ANY,ANY-method}
+\alias{$,MsBackendMapping-method}
+\alias{$<-,MsBackendMapping-method}
 \title{Internal page for hidden aliases}
 \usage{
+\S4method{backendMerge}{MsBackendMapping}(object, ...)
+
 .peaksData.MsBackendMapping(object)
 
 \S4method{peaksData}{MsBackendMapping}(object)
@@ -37,7 +41,11 @@
 
 \S4method{spectraVariables}{MsBackendMapping}(object)
 
-\S4method{[}{MsBackendMapping,ANY,ANY,ANY}(x, i, j, ..., drop = FALSE)
+\S4method{[}{MsBackendMapping}(x, i, j, ..., drop = FALSE)
+
+\S4method{$}{MsBackendMapping}(x, name)
+
+\S4method{$}{MsBackendMapping}(x, name) <- value
 }
 \description{
 For S4 methods that require a documentation entry but only clutter the index.

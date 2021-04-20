@@ -122,7 +122,7 @@
   - { source: '*PK$NUM_PEAK', target: 'peaksCount' }
 - action: type
   defaults: TRUE
-  omit: [rtime]
+  omit: [rtime, rtime_conversion_factor]
 - action: type
   params:
   - { field: 'accession', type: 'character' }
