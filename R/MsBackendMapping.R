@@ -104,6 +104,7 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
             
             if(hasData) {
               spectraData(object) <- data
+              object@spectraVariables <- colnames(object@variables)
             }
             else if(hasFiles) {
               if (!is.character(files))
