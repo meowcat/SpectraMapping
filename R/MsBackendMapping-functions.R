@@ -141,3 +141,14 @@
         select(-spectrum_id_temp, -`_source_backend`)
 }
 
+
+
+.set_peaks_data <- function(sp, peaks) {
+    peaks_df <- peaks %>%
+        map(as_tibble) %>%
+        bind_rows(.id = "spectrum_id") %>%
+        mutate(spectrum_id = as.numeric(spectrum_id)) %>%
+        rename(int = intensity)
+    sp@peaks <- peaks_df
+    sp
+}

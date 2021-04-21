@@ -91,17 +91,21 @@ setClass("MsBackendMapping",
 #' @rdname MsBackendMapping
 setMethod("backendInitialize", signature = "MsBackendMapping",
           function(object, files, data, nonStop = FALSE, parallel = FALSE, ...) {
-            if(!missing(files) & !missing(data))
+            
+            hasFiles <- !missing(files)
+            hasData <- !missing(data)
+            
+            if(hasData & hasFiles)
               stop("Either 'files' or 'data' (or none) is expected as source, but not both.")
             
             # Initially, initialze empty
             object@variables <- tibble(formatKey = c(), values = c(), spectrum_id = character())
             object@peaks <- tibble(spectrum_id = character(), mz = numeric(), int = numeric(), relint = numeric())
             
-            if(!missing(data) & missing(files)) {
+            if(hasData) {
               spectraData(object) <- data
             }
-            else if(missing(files) & !missing(data)) {
+            else if(hasFiles) {
               if (!is.character(files))
                 stop("Parameter 'files' is expected to be a character vector",
                      " with the files names from where data should be",
@@ -216,7 +220,7 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), p
   #
   mapping <- object@format$mapping
   if(length(mapping) > 0)
-    object <- writeVariables(object, mapping)
+    object <- mapVariables(object, mapping, "write")
   
   object@variables <- object@variables %>%
     mutate(file_ = glue(file))
@@ -467,3 +471,17 @@ setReplaceMethod("$", "MsBackendMapping", function(x, name, value) {
   validObject(x)
   x
 })
+
+
+#' @rdname hidden_aliases
+setReplaceMethod("peaksData", "MsBackendMapping", function(object, value) {
+  if (!(is.list(value) || inherits(value, "SimpleList")))
+    stop("'value' has to be a list-like object")
+  if (length(value) != length(object))
+    stop("Length of 'value' has to match length of 'object'")
+  names(value) <- object@variables$spectrum_id
+  object <- .set_peaks_data(object, value)
+  validObject(object)
+  object
+})
+

@@ -9,12 +9,22 @@ order_fixed <- function(vec, ordering) {
   order(vec_as_factor)
 }
 
-
+#' @export
 setGeneric("mapVariables", function(sp, ...) {
   stop("mapVariables is not implemented for this object")
 })
 
-setMethod("mapVariables", "MsBackendMapping", function(sp, mapping) {
+#' @export
+setMethod("mapVariables", "MsBackendMapping", function(sp, mapping, mode=c("read", "write")) {
+  if(mode[1] == "read")
+    return(.mapVariables_read(sp, mapping))
+  else if(mode[1] == "write")
+    return(.mapVariables_write(sp, mapping))
+} )
+
+
+
+.mapVariables_read <- function(sp, mapping) {
   if(!is.list(mapping)) 
     mapping <- read_yaml(mapping)
   actions <- get_actions(mapping)
@@ -28,27 +38,9 @@ setMethod("mapVariables", "MsBackendMapping", function(sp, mapping) {
   if(getOption("SpectraMapping")$verbose >= 1)
     log_level(INFO, "mapping done, elapsed: {round(time_action, 1)} seconds")
   sp
-} )
+}
 
-
-setMethod("mapVariables", "Spectra", function(sp, mapping) {
-  if(is(sp@backend, "MsBackendMapping")) {
-    sp@backend <- mapVariables(sp@backend, mapping)
-    return(sp)
-  }
-    
-  else
-    stop("mapping for generic backends not yet implemented")
-} )
-
-
-
-setGeneric("writeVariables", function(sp, ...) {
-  stop("writeVariables is not implemented for this object")
-})
-
-
-setMethod("writeVariables", "MsBackendMapping", function(sp, mapping) {
+.mapVariables_write <- function(sp, mapping) {
   if(!is.list(mapping)) 
     mapping <- read_yaml(mapping)
   actions <- get_actions(mapping)
@@ -63,15 +55,38 @@ setMethod("writeVariables", "MsBackendMapping", function(sp, mapping) {
   if(getOption("SpectraMapping")$verbose >= 1)
     log_level(INFO, "mapping done, elapsed: {round(time_action, 1)} seconds")
   sp
-} )
+}
 
 
-setMethod("writeVariables", "Spectra", function(sp, mapping) {
+#' @export
+setMethod("mapVariables", "Spectra", function(sp, mapping, ...) {
   if(is(sp@backend, "MsBackendMapping")) {
-    sp@backend <- writeVariables(sp@backend, mapping)
+    sp@backend <- mapVariables(sp@backend, mapping, ...)
     return(sp)
   }
-  
+    
   else
     stop("mapping for generic backends not yet implemented")
 } )
+
+# 
+# 
+# setGeneric("writeVariables", function(sp, ...) {
+#   stop("writeVariables is not implemented for this object")
+# })
+# 
+# 
+# setMethod("writeVariables", "MsBackendMapping", function(sp, mapping) {
+# 
+# } )
+# 
+# 
+# setMethod("writeVariables", "Spectra", function(sp, mapping) {
+#   if(is(sp@backend, "MsBackendMapping")) {
+#     sp@backend <- writeVariables(sp@backend, mapping)
+#     return(sp)
+#   }
+#   
+#   else
+#     stop("mapping for generic backends not yet implemented")
+# } )

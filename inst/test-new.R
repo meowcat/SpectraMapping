@@ -1,7 +1,8 @@
 library(devtools)
 library(tidyverse)
 library(Spectra)
-load_all()
+#load_all()
+library(SpectraMapping)
 
 
 
@@ -120,6 +121,10 @@ sp_massbank <- Spectra(
                                                       progress = TRUE,
                                                       mapping = "default")))
 
+
+
+sp_massbank <- sp_massbank %>% 
+  mapVariables(mapping = system.file("mapping/massbank.yaml", package="SpectraMapping"))
 
 arus_to_massbank <- sp_arus_mapped %>%
   writeVariables(mapping = system.file("mapping/massbank.yaml", package="SpectraMapping"))
