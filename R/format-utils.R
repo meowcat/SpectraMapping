@@ -15,20 +15,21 @@ setGeneric("mapVariables", function(sp, ...) {
 })
 
 #' @export
-setMethod("mapVariables", "MsBackendMapping", function(sp, mapping, mode=c("read", "write")) {
+setMethod("mapVariables", "MsBackendMapping", function(sp, mapping, mode=c("read", "write"), clear=FALSE) {
   if(mode[1] == "read")
-    return(.mapVariables_read(sp, mapping))
+    return(.mapVariables_read(sp, mapping, clear))
   else if(mode[1] == "write")
-    return(.mapVariables_write(sp, mapping))
+    return(.mapVariables_write(sp, mapping, clear))
 } )
 
 
 
-.mapVariables_read <- function(sp, mapping) {
+.mapVariables_read <- function(sp, mapping, clear) {
   if(!is.list(mapping)) 
     mapping <- read_yaml(mapping)
   actions <- get_actions(mapping)
-  sp@spectraVariables <- character(0)
+  if(clear)
+    sp@spectraVariables <- character(0)
   time_action_start <- Sys.time()
   if(getOption("SpectraMapping")$verbose >= 1)
     log_level(INFO, "mapping variables")
@@ -40,14 +41,15 @@ setMethod("mapVariables", "MsBackendMapping", function(sp, mapping, mode=c("read
   sp
 }
 
-.mapVariables_write <- function(sp, mapping) {
+.mapVariables_write <- function(sp, mapping, clear) {
   if(!is.list(mapping)) 
     mapping <- read_yaml(mapping)
   actions <- get_actions(mapping)
   time_action_start <- Sys.time()
   if(getOption("SpectraMapping")$verbose >= 1)
     log_level(INFO, "mapping variables")
-  sp@sourceVariables <- character(0)
+  if(clear)
+    sp@sourceVariables <- character(0)
   sp@variables <- sp@variables %>% select(all_of(sp@spectraVariables))
   sp <- reduce(rev(actions), ~ .y$execute_write(.x), .init = sp)
   time_action_end <- Sys.time()

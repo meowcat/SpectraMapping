@@ -149,10 +149,12 @@ massbank_read_test <- list.files(
 sp_massbank <- Spectra(
   massbank_read_test,
   source = MsBackendMapping(format = MsFormatMassbank(parallel=FALSE, progress = TRUE)))
-
 massbank_mapping <- system.file("mapping/massbank.yaml", package="SpectraMapping")
-
 sp_massbank_mapped <- mapVariables(sp_massbank, massbank_mapping)
+
+spectraData(sp_massbank_mapped)$dataStorage <- "<memory>"
+sp_massbank_comb <- combineSpectra(sp_massbank_mapped, 
+                                   spectraData(sp_massbank_mapped)$inchikey)
 
 
 

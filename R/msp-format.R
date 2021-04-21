@@ -21,5 +21,5 @@ MsFormatMsp <- function(parallel = FALSE, progress = FALSE, mapping = NULL) {
 }
 
 .msp_mapping <- function() {
-  load_yaml(system.file("mapping/nist-msp.yaml", package="SpectraMapping"))
+  read_yaml(system.file("mapping/nist-msp.yaml", package="SpectraMapping"))
 }

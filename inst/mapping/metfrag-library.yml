@@ -1,0 +1,45 @@
+- action: order
+  order: [SampleName, InChI, InChIKey, IsPositiveIonMode, PrecursorIonMode,
+  MSLevel, IonizedPrecursorMass, NumPeaks, MolecularFingerPrint]
+- action: mapping
+  params: 
+  - { source: '*IonizedPrecursorMass', target: "precursorMz" }
+  - { source: '*InChIKey', target: "inchikey" }
+  - { source: '*InChI', target: "inchi"}
+  - { source: '*NumPeaks', target: "peaksCount" }
+  - { source: '*MolecularFingerPrint', target: "cdkFingerprint" }
+  - { source: '*MassError', target: "massError" }
+- action: crossmap
+  # Extract the first name as the main name to use for composing the RECORD_TITLE
+  source: '*SampleName'
+  target: 'synonyms'
+  write_split: {SampleName: '1'}
+- action: translate
+  source: IsPositiveIonMode
+  target: '*polarity'
+  dictionary:
+  - {value: 1, read: 'True', write: 'True'}
+  - {value: 0, read: 'False', write: 'False'}
+# This one is an assumption, I have to check it,
+# another solution is using a dictionary which is nicer
+# because it would work in read and write direction.
+# But I need the exhaustive list then
+- action: mutate
+  source: '*PrecursorIonMode'
+  target: [precursorMz, exact_mass]
+  write: '{(precursorMz - exact_mass) %/% 1}'
+- action: translate
+  source: '*MSLevel'
+  target: '*msLevel'
+  dictionary:
+  - {value: 2, read: 'MS2', write: 'MS2'}
+  - {value: 1, read: 'MS1', write: 'MS1'}  
+- action: type
+  defaults: TRUE
+- action: type
+  params: 
+  - { field: 'inchikey', type: 'character' }
+  - { field: 'cdkFingerprint', type: 'character' }
+
+
+

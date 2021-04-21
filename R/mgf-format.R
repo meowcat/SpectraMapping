@@ -1,19 +1,26 @@
 
 #' @export
-MsFormatMgf <- function(parallel = FALSE, progress=FALSE) {
+MsFormatMgf <- function(parallel = FALSE, progress=FALSE, mapping = NULL) {
   
-  mapping <- .mgf_mapping()
+  if(is.null(mapping))
+    mapping_ <- list()
+  else if(is.list(mapping))
+    mapping_ <- mapping 
+  else if(mapping == "default")
+    mapping_ <- .mgf_mapping()
+  else
+    mapping_ <- read_yaml(mapping)
   
   format <- list(
     reader = .mgf_reader(parallel = parallel, progress=progress),
-    writer = .mgf_writer()
-  ) %>% load_mapping(mapping)
+    writer = .mgf_writer(),
+    mapping = mapping_
+  )
   class(format) <- c("MsFormat", class(format))
   format
 }
 
 .mgf_mapping <- function() {
-  return(NULL)
-  #loadSpectraMapping(system.file("mapping/mgf-mapping.yaml", package="SpectraMapping"))
+  read_yaml(system.file("mapping/gnps-mgf.yaml", package="SpectraMapping"))
 }
 

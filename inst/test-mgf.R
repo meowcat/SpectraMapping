@@ -1,16 +1,17 @@
 
 library(furrr)
 library(devtools)
-#library(SpectraMapping)
-load_all()
+library(SpectraMapping)
+#load_all()
 library(readr)
 library(Spectra)
 #plan(multiprocess)
 system.time(
   spMgf <- Spectra(
     system.file("test_spectra/sample.mgf", package="SpectraMapping"),
-    source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE)))
+    source = MsBackendMapping(format = MsFormatMgf(parallel=FALSE, mapping="default")))
 )
+spectraData(spMgf)
 
 
 
@@ -22,17 +23,22 @@ system.time(
     system.file("test_spectra/sample.mgf", package="SpectraMapping"),
     source = MsBackendMgf())
 )
+spectraData(spMgfOrig)
 
 system.time(
   spMsp <- Spectra(
     system.file("test_spectra/sample.msp", package="SpectraMapping"),
-    source = MsBackendMapping(format = MsFormatMsp(parallel=FALSE)))
+    source = MsBackendMapping(format = MsFormatMsp(parallel=FALSE, mapping="default")))
 )
+spectraData(spMsp)
 
 
-spMgfTarget <- spMgf
-spMspTarget <- spMsp
-# MSP to MSP
+
+spMspToMgf <- setBackend(spMsp,
+           MsBackendMapping(format = MsFormatMgf(mapping = "default")))
+spectraData(spMspToMgf)
+
+
 
 
 spectraData(spMspTarget@backend) <- spectraData(spMsp@backend)

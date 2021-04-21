@@ -1,0 +1,30 @@
+# - action: extract
+#   source: Comment
+#   target: ['parentmass_', 'exactmass', '*name', '*ionization', '*synonym', '*formula']
+#   read: 'Parent=([0-9.]+) Mz_exact=([0-9.]+) ; (.*?); (.*?); (.*?); (.*)''
+#   write: 'Parent={parentmass_} Mz_exact={exactmass} ; {name}; {ionization}; {synonym}; {formula}'
+#   convert: TRUE
+- action: mapping
+  params:
+  - { source: MSLEVEL, target: msLevel }
+  - { source: RTINSECONDS, target: rtime }
+  - { source: SCANS, target: scanIndex }
+  - { source: PEPMASSINT, target: precursorIntensity }
+  - { source: CHARGE, target: precursorCharge }
+  - { source: FILENAME, target: dataOrigin }
+  - { source: SMILES, target: smiles }
+  - { source: INCHI, target: inchi }
+  - { source: INCHIAUX, target: inchiAux }
+  - { source: SPECTRUMID, target: accession }
+  - { source: NAME, target: title }
+  - { source: PI, target: authors }
+  - { source: PUBMED, target: pubmed }
+  - { source: SOURCE_INSTRUMENT, target: instrument }
+- action: translate
+  source: IONMODE
+  target: '*polarity'
+  dictionary:
+  - {value: 1, read: ["Positive", "POSITIVE", "P"], write: "Positive"}
+  - {value: 0, read: ["Negative", "NEGATIVE", "N"], write: "Negative"}
+  
+

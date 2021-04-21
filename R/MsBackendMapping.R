@@ -105,6 +105,7 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
             if(hasData) {
               spectraData(object) <- data
               object@spectraVariables <- colnames(object@variables)
+              object@sourceVariables <- c()
             }
             else if(hasFiles) {
               if (!is.character(files))
@@ -135,14 +136,17 @@ setMethod("backendInitialize", signature = "MsBackendMapping",
                 dplyr::mutate(spectrum_id = as.integer(spectrum_id)) %>%
                 pivot_wider(names_from = "formatKey", values_from = "value", values_fn = list)
               object@sourceVariables <- colnames(object@variables)
+              object@variables$dataStorage <- "<memory>"
+              object@variables$centroided <- TRUE
+              object@spectraVariables <- union(object@spectraVariables, c("dataStorage", "centroided"))
             }
             
             message("done")
             # Apply mapping transformations
             if(!is.null(object@format$mapping))
               object <- mapVariables(object, object@format$mapping)
-            object@variables$dataStorage <- "<memory>"
-            object@variables$centroided <- TRUE
+            
+            
             return(object)
           })
 
