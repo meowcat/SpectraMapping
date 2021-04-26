@@ -204,7 +204,7 @@ MetadataActionBase <- R6::R6Class(
          }
          time_action_end <- Sys.time()
          time_action <- time_action_end - time_action_start
-         time_action <- (time_action_end - time_action_start) %>% as.numeric()
+         time_action <- difftime(time_action_end, time_action_start, units = "secs") %>% as.numeric()
          if(getOption("SpectraMapping")$verbose >= 2)
             log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
          return(backend)
@@ -243,7 +243,7 @@ MetadataActionBase <- R6::R6Class(
             backend <- self$process_write(backend, self$settings)
          }
          time_action_end <- Sys.time()
-         time_action <- (time_action_end - time_action_start) %>% as.numeric()
+         time_action <- difftime(time_action_end, time_action_start, units = "secs") %>% as.numeric()
          if(getOption("SpectraMapping")$verbose >= 2)
             self$log_level(INFO, "elapsed: {round(time_action, 1)} seconds")
          
@@ -1438,8 +1438,10 @@ MetadataActionNest <- R6::R6Class(
       
       .col.prefix <- prefix
       
+      fix_chr <- function(x) map(x, as.character)
+      
       data@variables <- data@variables %>%
-         mutate(across(starts_with(.col.prefix), as.character)) %>%
+         mutate(across(starts_with(.col.prefix), as.list)) %>%
          nest(cols = starts_with(.col.prefix)) %>%
          mutate(cols = cols %>%
                    map( ~ pivot_longer(
@@ -1447,8 +1449,11 @@ MetadataActionNest <- R6::R6Class(
                       everything(),
                       names_to = "key",
                       names_prefix = .col.prefix,
-                      values_to = "value")
-                   ) )
+                      values_to = "value",
+                      values_transform = list("value" = fix_chr)
+                      )
+                   ) ) %>%
+         mutate(cols = map(cols, ~ unnest(.x, "value")))
       # Reorder to specified order if required
       if("order" %in% names(params)) {
          data@variables <- data@variables %>%
