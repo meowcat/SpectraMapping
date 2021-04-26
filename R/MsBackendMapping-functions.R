@@ -142,13 +142,21 @@
 }
 
 
+.check_int_colname <- function(tbl) {
+    if("int" %in% colnames(tbl))
+        return(tbl)
+    if("intensity" %in% colnames(tbl))
+        return(tbl %>% dplyr::rename(int = intensity))
+    stop("no intensity column was provided")
+}
+
 
 .set_peaks_data <- function(sp, peaks) {
     peaks_df <- peaks %>%
         map(as_tibble) %>%
+        map(.check_int_colname) %>%
         bind_rows(.id = "spectrum_id") %>%
-        mutate(spectrum_id = as.numeric(spectrum_id)) %>%
-        rename(int = intensity)
+        mutate(spectrum_id = as.numeric(spectrum_id))
     sp@peaks <- peaks_df
     sp
 }
