@@ -1440,30 +1440,47 @@ MetadataActionNest <- R6::R6Class(
       
       fix_chr <- function(x) map(x, as.character)
       
-      data@variables <- data@variables %>%
-         mutate(across(starts_with(.col.prefix), as.list)) %>%
-         nest(cols = starts_with(.col.prefix)) %>%
-         mutate(cols = cols %>%
-                   map( ~ pivot_longer(
-                      .x,
-                      everything(),
+      # possibly faster alternative:
+      # first copy out columns to new tibble
+      # then perform pivot_longer without nesting
+      # then (nest? and) join to original table,
+      # removing the original columns
+      
+      
+      
+      nesting_data <- data@variables %>%
+         select(spectrum_id, starts_with(.col.prefix)) %>%
+         mutate(across(starts_with(.col.prefix), as.list))
+      
+      nesting_long <- nesting_data %>%
+         pivot_longer(-spectrum_id,
                       names_to = "key",
                       names_prefix = .col.prefix,
                       values_to = "value",
-                      values_transform = list("value" = fix_chr)
-                      )
-                   ) ) %>%
-         mutate(cols = map(cols, ~ unnest(.x, "value")))
-      # Reorder to specified order if required
-      if("order" %in% names(params)) {
-         data@variables <- data@variables %>%
-            mutate(cols = cols %>% map(~.x[order_fixed(.x$key, ordering = params$order),]))
-      }
-      # Write out
-      data@variables <- data@variables %>%
-         mutate(cols = cols %>%
-            map(~ .x %>% filter(!is.na(value)) %>% glue_data(params$write))) %>%
-         rename(!!source := cols)
+                      values_transform = list("value" = fix_chr)) %>%
+         group_by(spectrum_id)
+      if("order" %in% names(params))
+         nesting_long <- nesting_long %>% 
+            arrange(factor(key, params$order)) #%>%
+            # mutate(rel_index = row_number())
+      nesting_long <- nesting_long %>%
+         filter(!is.na(value)) %>%
+         mutate(col = glue(params$write)) %>%
+         chop(-spectrum_id) %>%
+         mutate(col = as.list(col)) %>%
+         select(spectrum_id, !!source := col)
+         
+      
+      data@variables <- 
+         data@variables %>%
+         select(-starts_with(.col.prefix)) %>%
+         full_join(nesting_long, by="spectrum_id")
+
+      # TODO: check that both datasets are complete
+      # or actually: don't! why would you?, It can just have NAs.
+      # Good question: Should NA values be removed before glue_data?
+      # Probably yes. If the user wants NA written, they need to set defaults.
+      # Fixed accordingly. (see above)
       
       if(set_source_var) {
          data@sourceVariables <- union(data@sourceVariables, source)
@@ -1471,6 +1488,7 @@ MetadataActionNest <- R6::R6Class(
       
       
       return(data)
+
    }
    )
 )

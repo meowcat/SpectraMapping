@@ -1,20 +1,24 @@
 - action: order
   order: [ACCESSION, RECORD_TITLE, DATE, AUTHORS, LICENSE, COPYRIGHT, PUBLICATION, PROJECT, COMMENT,
     'CH$NAME', 'CH$COMPOUND_CLASS', 'CH$FORMULA', 'CH$EXACT_MASS', 'CH$SMILES', 'CH$IUPAC', 'CH$LINK',
-    'AC$INSTRUMENT', 'AC$INSTRUMENT_TYPE', 'AC$MASS_SPECTROMETRY', 'AC$CHROMATOGRAPHY', 'AC$GENERAL', 
+    'AC$INSTRUMENT', 'AC$INSTRUMENT_TYPE', 'AC$MASS_SPECTROMETRY', 'AC$CHROMATOGRAPHY', 'AC$GENERAL',
     'MS$FOCUSED_ION', 'MS$DATA_PROCESSING', 'PK$SPLASH', 'PK$ANNOTATION', 'PK$NUM_PEAK', 'PK$PEAK']
 - action: nesting
   params:
   - { source: '*AC$CHROMATOGRAPHY', prefix: 'CHROM@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
-  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{key} {value}", 
+  - { source: '*AC$MASS_SPECTROMETRY', prefix: 'MS@', read: '(.*?)\s(.*)$', write: "{key} {value}",
       order: [MS_TYPE, ION_MODE, '*'] }
   - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
   - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
 - action: default
-  source: '*CH$COMPOUND_CLASS'
-  write: 'N/A' 
+  params:
+    - source: '*CH$COMPOUND_CLASS'
+    - source: '*CH$SMILES'
+    - source: '*CH$IUPAC'
+    - source: '*CH$FORMULA'
+  write: 'N/A'
 - action: extract
-  params: 
+  params:
   - source: 'MS@COLLISION_ENERGY'
     target: ['*collisionEnergy', collisionEnergyUnit]
     read: '([0-9]+)\s?(.*)'
@@ -27,7 +31,7 @@
     trim: TRUE
 - action: default
   source: 'collisionEnergyUnit'
-  write: '' 
+  write: ''
 - action: extract
   # composing RECORD_TITLE on-the-fly while writing according to specification
   # There is no reading, the fields are redundant
@@ -42,6 +46,9 @@
   target: 'CH$NAME'
   write_split: {first_name: '1'}
 # Handle retention times
+- action: type
+  field: [temp_rt, rtime_conversion_factor]
+  type: numeric
 - action: translate
   params:
   - source: 'temp_rt_unit'
@@ -60,9 +67,7 @@
     dictionary:
     - {value: 1, read: ['POSITIVE', 'positive'], write: 'POSITIVE'}
     - {value: 0, read: ['NEGATIVE', 'negative'], write: 'NEGATIVE'}
-- action: type
-  field: [temp_rt, rtime_conversion_factor]
-  type: numeric
+
 - action: mutate
   params:
   - source: 'temp_rt'
@@ -70,6 +75,7 @@
     read: '{temp_rt * rtime_conversion_factor}'
     write: '{rtime / rtime_conversion_factor}'
     required: rtime_conversion_factor
+    convert: FALSE
 - action: default
   source: rtime_conversion_factor
   write: 1
@@ -89,6 +95,7 @@
     target: '*comments'
   - source: 'MS$DATA_PROCESSING'
     target: '*dataProcessing'
+#
 - action: mapping
   params:
   - { source: '*ACCESSION', target: 'accession' }
@@ -96,6 +103,7 @@
   - { source: '*DATE', target: 'date' }
   - { source: '*AUTHORS', target: 'authors' }
   - { source: '*LICENSE', target: 'license' }
+  - { source: '*PROJECT', target: 'project' }
   - { source: '*COPYRIGHT', target: 'copyright' }
   - { source: '*CH$NAME', target: 'synonyms' }
   - { source: '*CH$COMPOUND_CLASS', target: 'compoundClass' }
@@ -134,6 +142,7 @@
   - { field: 'compoundClass', type: 'character' }
   - { field: 'formula', type: 'character' }
   - { field: 'exactmass', type: 'numeric' }
+  - { field: 'project', type: 'character' }
   # - { field: 'smiles', type: 'character' }
   # - { field: 'inchi', type: 'character' }
   - { field: 'cas', type: 'character' }

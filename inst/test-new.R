@@ -2,9 +2,11 @@ library(devtools)
 library(tidyverse)
 library(Spectra)
 #load_all()
+library(glue)
 library(SpectraMapping)
 
 
+options(SpectraMapping = list(verbose = 2))
 
 msp_arus <- system.file("test_spectra/sample.msp", package="SpectraMapping")
 sp_arus <- Spectra(
@@ -32,7 +34,7 @@ lipidblast_read <- Spectra(
 
 #save(lipidblast_read, file="lipidblast.RData")
 
-load_all()
+# load_all()
 lipidblast_map <- lipidblast_read %>%
   mapVariables(system.file("mapping/lipidblast-riken-msp.yaml", package = "SpectraMapping"))
 
@@ -97,7 +99,7 @@ spectraData(lipidblast_map_subset)$molecule <- NULL
 
 
 lipidblast_to_massbank <- lipidblast_map_subset %>%
-  writeVariables(mapping = system.file("mapping/massbank.yaml",
+  mapVariables(mode="write", mapping = system.file("mapping/massbank.yaml",
                                        package="SpectraMapping"))
 
 lipidblast_to_massbank@backend@variables -> sd
@@ -108,7 +110,7 @@ export(lipidblast_map_subset,
          progress = TRUE,
          mapping = system.file("mapping/massbank.yaml", package="SpectraMapping")
        )),
-       file = "X:/massbank-lb/MassBank-data/LB/{accession}.txt")
+       file = "X:/massbank-test/MassBank-data/LB/{accession}.txt")
 
 
 # lb_subset <- lipidblast_to_massbank[1:100]
