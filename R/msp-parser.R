@@ -92,7 +92,8 @@
     
     
     #stopifnot(spectrum_[[1]])
-    spectrum_lines_split <- spectrum_ %>% str_detect("^Num [pP]eaks:.*") %>% cumsum() %>% lag(default = 0)
+    #spectrum_lines_split <- spectrum_ %>% str_detect("^Num [pP]eaks:.*") %>% cumsum() %>% lag(default = 0)
+    spectrum_lines_split <- spectrum_ %>% str_detect("^[0-9].*") %>% cumsum()
     vars <- spectrum_[spectrum_lines_split == 0] %>%
       str_replace("^Synon:\\s?(\\$[0-9][0-9]) ", "\\1: ") %>% # Replace e.g. "Synon: $99 bla" with "$99: bla"
       str_match("^(.*?):\\s?(.*)$") %>%
@@ -101,7 +102,8 @@
       as_tibble(.name_repair = "unique")
     
     # Read ions
-    lines_ions <- spectrum_[spectrum_lines_split == 1]
+    ions <- 
+    lines_ions <- spectrum_[spectrum_lines_split > 0]
     # find low-res ion definitions of type 123 234; 234 234; 1234 234 etc
     lines_ions_lr <- lines_ions  %>%
       str_detect("([0-9.]+)[\\s\\t]+([0-9.]+);")
@@ -115,7 +117,7 @@
     else
     {
       # read as HR spectrum
-      ions <- spectrum_[spectrum_lines_split == 1] %>%
+      ions <- spectrum_[spectrum_lines_split > 0] %>%
         str_match("([0-9.]+)[\\s\\t]+([0-9.]+)(.*)$") %>%
         `[`(,c(2:4), drop=FALSE) %>%
         set_colnames(c("mz", "int", "annotation")) %>%
