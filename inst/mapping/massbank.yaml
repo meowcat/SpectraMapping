@@ -46,16 +46,14 @@
   target: 'CH$NAME'
   write_split: {first_name: '1'}
 # Handle retention times
-- action: type
-  field: [temp_rt, rtime_conversion_factor]
-  type: numeric
+
 - action: translate
   params:
   - source: 'temp_rt_unit'
     target: '*rtime_conversion_factor'
     dictionary:
-    - {value: 60, read: 'min', write: 'min'}
-    - {value: 1, read: 'sec', write: 'sec'}
+    - {value: '60', read: 'min', write: 'min'}
+    - {value: '1', read: 'sec', write: 'sec'}
   - source: 'MS@MS_TYPE'
     target: '*msLevel'
     dictionary:
@@ -67,13 +65,15 @@
     dictionary:
     - {value: 1, read: ['POSITIVE', 'positive'], write: 'POSITIVE'}
     - {value: 0, read: ['NEGATIVE', 'negative'], write: 'NEGATIVE'}
-
+- action: type
+  field: [temp_rt, rtime_conversion_factor]
+  type: numeric
 - action: mutate
   params:
   - source: 'temp_rt'
     target: '*rtime'
     read: '{temp_rt * rtime_conversion_factor}'
-    write: '{rtime / rtime_conversion_factor}'
+    write: '{as.numeric(rtime) / rtime_conversion_factor}'
     required: rtime_conversion_factor
     convert: FALSE
 - action: default
@@ -95,6 +95,8 @@
     target: '*comments'
   - source: 'MS$DATA_PROCESSING'
     target: '*dataProcessing'
+  - source: 'CHROM@SOLVENT'
+    target: '*solvents'
 #
 - action: mapping
   params:
