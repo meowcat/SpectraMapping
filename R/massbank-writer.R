@@ -4,10 +4,25 @@
   variables_ <- variables %>% as.list()
   # Select and order variables according to backend@sourceVariables selection and order
   var_factor <- factor(names(variables_), levels = backend@sourceVariables)
+  
+  # Find which columns should be treated as tables
+  table_vars_ <- map_lgl(
+    colnames(backend@variables),
+    ~ isTRUE(attr(backend@variables[[.x]], "table"))
+  )
+  table_vars <- colnames(backend@variables)[table_vars_]
+  
   var_order <- order(var_factor, na.last = NA)
   var_print <- variables_[var_order]
   var_tbl_ <- tibble(key = names(var_print), value = var_print)
-  var_tbl <- var_tbl_ %>% unnest(value) %>% unnest(value)
+  var_tbl_ <- var_tbl_ %>% unnest(value)
+  # Render tables according to MassBank specifications
+  var_tbl_ <- var_tbl_ %>% mutate(
+    value = ifelse(key %in% table_vars,
+                   map(value, ~ paste(.x, collapse = "\n  ")), 
+                   value)
+  )
+  var_tbl <- var_tbl_ %>% unchop(value)
   var_render <- var_tbl %>% glue_data("{key}: {value}")
   # Verify that NUM_PEAKS is there
   if(!("PK$NUM_PEAK" %in% names(var_print))) {

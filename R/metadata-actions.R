@@ -866,6 +866,7 @@ MetadataActionTabular <- R6::R6Class(
                   map(paste, collapse = params$sep) %>%
                   modify_if(~.x == "", ~ character(0))
                temp_col <- map2(temp_col, headers, ~c(.y, .x))
+               attr(temp_col, "table") <- TRUE
             }
             data@variables[[source]] <- temp_col
          }
@@ -1456,8 +1457,11 @@ MetadataActionNest <- R6::R6Class(
          pivot_longer(-spectrum_id,
                       names_to = "key",
                       names_prefix = .col.prefix,
-                      values_to = "value",
-                      values_transform = list("value" = fix_chr)) %>%
+                      values_to = "value"#,
+                      #values_transform = list("value" = fix_chr)
+                      ) %>%
+         mutate(value = map(value, as.character)) %>%
+         unchop(value) %>%
          group_by(spectrum_id)
       if("order" %in% names(params))
          nesting_long <- nesting_long %>% 
