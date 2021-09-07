@@ -50,7 +50,7 @@ setMethod("mapVariables", "MsBackendMapping", function(sp, mapping, mode=c("read
     log_level(INFO, "mapping variables")
   if(clear)
     sp@sourceVariables <- character(0)
-  sp@variables <- sp@variables %>% select(all_of(sp@spectraVariables))
+  sp@variables <- sp@variables %>% select(all_of(sp@spectraVariables), spectrum_id)
   sp <- reduce(rev(actions), ~ .y$execute_write(.x), .init = sp)
   time_action_end <- Sys.time()
   time_action <- (time_action_end - time_action_start) %>% as.numeric()
