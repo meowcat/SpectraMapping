@@ -1,21 +1,21 @@
 
 .msp_reader <- function(parallel = FALSE, single_spectrum = FALSE, progress=FALSE) {
-  
+
   # data_ <- str_split(data, "\n\n+")
   # data_ <- data_[[1]]
-  # 
-  # 
+  #
+  #
   # spectrum_d <- data_[[22]]
-  # 
-  # spectrum_ <- spectrum_d %>% 
-  #   str_split("\n") %>% 
+  #
+  # spectrum_ <- spectrum_d %>%
+  #   str_split("\n") %>%
   #   magrittr::extract2(1) %>%
   #   map_chr(~ paste0(.x, "\n"))
-  
+
   # Properties of type XXX=value\n
   ## Key
   # specVariable_key <- ((regex_replace("Synon: (\\$[0-9][0-9]) ", "\\1") %then% succeed(""))
-  #                      %alt% 
+  #                      %alt%
   #                        (delimited_string(":") %then% (fixed_string(": "))))
   # ## Value
   # specVariable_value <- specify(
@@ -26,7 +26,7 @@
   # )
   # # Property
   # specVariable <- specify(
-  #   query = (specVariable_key %then% specVariable_value %then% newline 
+  #   query = (specVariable_key %then% specVariable_value %then% newline
   #            %using% function(x) {
   #              list(type = "specVariable", formatKey = x[[1]], value = x[[3]])
   #            }),
@@ -38,30 +38,30 @@
   #                  list(type = "specVariable", formatKey="MS1PRECURSOR", value="123123232.1232"),
   #                  list(type = "specVariable", formatKey="$66", value="synoncomment")),
   #   leftovers = list("", NULL, "left","asdf"))
-  # 
+  #
   # # Ion table entries of type 123.1234 999
   # ion_plain <- specify(
   #   query=(
-  #     (float %then% spacing %then% float %then% newline) 
-  #     %using% 
+  #     (float %then% spacing %then% float %then% newline)
+  #     %using%
   #       function(x) list(type = "ion", mz = x[[1]], int = x[[3]], annotation = NA)
   #   ),
   #   testcases = c("123.1234\t666\n", "121.2323     222\n"),
   #   leftovers = c("",""))
   # ion_annotated <- specify(
   #   query=(
-  #     (float %then% spacing %then% float 
-  #      %then% spacing %then% 
-  #        fixed_string("\"") %then% delimited_string("\"") %then% fixed_string("\"") %then% newline) 
-  #     %using% 
+  #     (float %then% spacing %then% float
+  #      %then% spacing %then%
+  #        fixed_string("\"") %then% delimited_string("\"") %then% fixed_string("\"") %then% newline)
+  #     %using%
   #       function(x) list(type = "ion", mz = x[[1]], int = x[[3]], annotation = x[[6]])
   #   ),
   #   testcases = c('123.1234\t666\t"asdfa sdfa 2312"\n', '121.2323     222 "myannotation"\n'),
   #   leftovers = c("","")
   # )
   # ion  <- (ion_plain %alt% ion_annotated)
-  
-  # 
+
+  #
   # # Spectrum: spectrum start delimiter, variable block, ion table, spectrum end delimiter
   # ## Spectrum delimiters
   # end_marker <- zap_entry(many_iter(newline))
@@ -69,15 +69,15 @@
   # spectrum <- specify(
   #   query = ((
   #     (many_iter(specVariable) %using% bind_rows)
-  #     %then% 
+  #     %then%
   #       (many_iter(ion) %using% bind_rows)
-  #     %then% 
+  #     %then%
   #       end_marker)
   #     %using% function(x) compact(x) %>% (function(xx) list(variables = xx[[1]], ions = xx[[2]]))),
   #   testcases = c("Name: Spectra\nSynon: $32 gugus\n121.1212\t4343\n121.3333  3434 \"fasdfasdf\"\n\n"),
   #   leftovers = c(""))
-  # 
-  
+  #
+
   # spectrum_line <- function(line) {
   #   (ion %alt% specVariable)
   # }
@@ -86,11 +86,11 @@
 
     spectrum_ <- data %>%
       str_split("\n") %>%
-      extract2(1) %>% 
+      extract2(1) %>%
       keep(~ .x != "") %>%
       map(~ paste0(.x, "\n"))
-    
-    
+
+
     #stopifnot(spectrum_[[1]])
     #spectrum_lines_split <- spectrum_ %>% str_detect("^Num [pP]eaks:.*") %>% cumsum() %>% lag(default = 0)
     spectrum_lines_split <- spectrum_ %>% str_detect("^[0-9].*") %>% cumsum()
@@ -100,9 +100,8 @@
       `[`(,c(2:3)) %>%
       set_colnames(c("formatKey", "value")) %>%
       as_tibble(.name_repair = "unique")
-    
+
     # Read ions
-    ions <- 
     lines_ions <- spectrum_[spectrum_lines_split > 0]
     # find low-res ion definitions of type 123 234; 234 234; 1234 234 etc
     lines_ions_lr <- lines_ions  %>%
@@ -113,7 +112,7 @@
         map(~str_split(fixed(";"))) %>%
         flatten_chr()
         stop("LR spectra not yet supported")
-    } 
+    }
     else
     {
       # read as HR spectrum
@@ -124,11 +123,11 @@
         as_tibble(.name_repair = "unique") %>%
         mutate(mz = as.numeric(mz), int = as.numeric(int))
     }
-    
 
-      
+
+
     #read_table2(col_names = c("mz", "int", "annotation"), col_types = 'ddc')
-# 
+#
 #     ions <- spectrum_[!spectrum_lines_var & !spectrum_lines_end] %>%
 #       paste0(collapse = "\n") %>%
 #       read_table2(col_names = c("mz", "int"),
@@ -138,13 +137,13 @@
 #     # ions <- data %>% keep(~ .x$type == "ion") %>% bind_rows() %>% select(-type)
     list(variables = vars, ions = ions)
   }
-  
-  
+
+
   if(single_spectrum)
     return(spectrum)
-  
-  
-  
+
+
+
   safe_spectrum <- function(x, pb=NULL) {
     tryCatch({
       if(!is.null(pb))
@@ -156,23 +155,23 @@
       return(list(result=NULL))
     })
   }
-  
+
   document <- function(data) {
-    
+
     data_ <- str_split(data, "\n\n+")
     data_ <- data_[[1]]
-    
+
     pb <- NULL
     if(progress)
       pb <- progress::progress_bar$new(total = length(data_))
-    
+
     if(!parallel)
       return(data_ %>% map( ~ safe_spectrum(.x, pb)) %>% compact())
     else
       return(data_ %>% future_map( ~ safe_spectrum(.x), .progress = progress) %>% compact())
   }
   return(document)
-  
+
 }
 
 
