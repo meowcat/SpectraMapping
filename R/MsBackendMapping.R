@@ -166,7 +166,13 @@ setMethod("backendMerge", "MsBackendMapping", function(object, ...) {
 
 
 #' @rdname hidden_aliases
-.peaksData.MsBackendMapping <- function(object) {
+.peaksData.MsBackendMapping <- function(
+    object, 
+    columns = c("mz", "intensity"), 
+    ...) {
+  if (!all(columns %in% c("mz", "intensity")))
+    stop("'peaksData' for 'MsBackendMapping' does only support",
+         " columns \"mz\" and \"intensity\"", .call = FALSE)
   if (!length(object))
     return(list())
   .subset_peaks(object) %>%
