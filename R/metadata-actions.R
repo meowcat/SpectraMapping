@@ -284,7 +284,7 @@ MetadataActionBase <- R6::R6Class(
       #' @param param_settings A `params` entry from `settings`, i.e. a single action step.
       merge_settings = function(param_settings) {
          settings_ <- self$settings
-         settings_[["params"]] <- NULL
+         settings_[["params"]] <- rlang::zap()
          settings <- do.call(list_modify, 
                                   c(list(settings_), 
                                     param_settings)
@@ -1056,7 +1056,7 @@ MetadataActionTranslate <- R6::R6Class(
          
          # extract the reads from the dictionary
          dictionary_read <- params$dictionary %>% 
-            map(~list_modify(.x, write = NULL)) %>% 
+            map(~list_modify(.x, write = rlang::zap())) %>% 
             map_dfr(as_tibble) %>%
             rename(!!source := read,
                    !!target := value)
@@ -1111,7 +1111,7 @@ MetadataActionTranslate <- R6::R6Class(
          
          # extract the reads from the dictionary
          dictionary_write <- params$dictionary %>% 
-            map(~list_modify(.x, read = NULL)) %>% 
+            map(~list_modify(.x, read = rlang::zap())) %>% 
             map_dfr(as_tibble) %>%
             rename(!!source := write,
                    !!target := value)
