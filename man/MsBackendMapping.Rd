@@ -41,9 +41,6 @@ warning is shown (\code{nonStop = TRUE}). Note that any other error
 (such as xml import error) will abort import regardless of
 parameter \code{nonStop}.
 }
-\examples{
-
-}
 \author{
 Michele Stravs \href{mailto:stravs@imsb.biol.ethz.ch}{stravs@imsb.biol.ethz.ch}
 }

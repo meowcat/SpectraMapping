@@ -11,9 +11,6 @@
 
 \item{fields}{}
 }
-\value{
-
-}
 \description{
 Transform variable types according to field definition
 }
