@@ -7,7 +7,7 @@ MsFormatSirius <- function(parallel = FALSE, progress=FALSE, mapping = NULL) {
   else if(is.list(mapping))
     mapping_ <- mapping
   else if(mapping == "default")
-    mapping_ <- .mgf_mapping()
+    mapping_ <- .sirius_mapping()
   else
     mapping_ <- read_yaml(mapping)
 
@@ -20,7 +20,7 @@ MsFormatSirius <- function(parallel = FALSE, progress=FALSE, mapping = NULL) {
   format
 }
 
-.mgf_mapping <- function() {
+.sirius_mapping <- function() {
   read_yaml(system.file("mapping/sirius.yaml", package="SpectraMapping"))
 }
 

@@ -1,0 +1,17 @@
+# - action: extract
+#   source: Comment
+#   target: ['parentmass_', 'exactmass', '*name', '*ionization', '*synonym', '*formula']
+#   read: 'Parent=([0-9.]+) Mz_exact=([0-9.]+) ; (.*?); (.*?); (.*?); (.*)''
+#   write: 'Parent={parentmass_} Mz_exact={exactmass} ; {name}; {ionization}; {synonym}; {formula}'
+#   convert: TRUE
+- action: mapping
+  params:
+  - { source: '*compound', target: '*title' }
+  - { source: '*compound', target: '*synonyms' }
+  - { source: '*SMILES', target: '*smiles' }
+  - { source: '*rt', target: '*rtime' }
+  - { source: '*parentmass', target: '*precursorMz' }
+  - { source: '*ionization', target: '*adduct' }
+  - { source: '*collision', target: '*collisionEnergy' }
+
+

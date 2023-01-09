@@ -1,4 +1,8 @@
 
+.sirius_writer <- function() {
+  return(NA)
+}
+
 .sirius_reader <- function(parallel = FALSE, single_spectrum = FALSE, progress=FALSE) {
 
   spectrum <- function(data) {
@@ -29,7 +33,6 @@
       set_colnames(c("mz", "int", "annotation")) %>%
       as_tibble(.name_repair = "unique") %>%
       mutate(mz = as.numeric(mz), int = as.numeric(int))
-
 
 
 
@@ -106,9 +109,15 @@
             filter(!(formatKey %in% spectrum_markers)),
           block$variables
           ))
+      block
     })
     
     blocks <- blocks[is_spectrum]
+    
+    # find and drop empty spectra
+    has_ions <- map_lgl(blocks, ~ nrow(.x$ions) > 0)
+    message(glue("dropping {sum(!has_ions)} spectra without ions"))
+    blocks <- blocks[has_ions]
     
     return(blocks)
 

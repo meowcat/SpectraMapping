@@ -1145,6 +1145,14 @@ MetadataActionTranslate <- R6::R6Class(
    )
 )
 
+.fix_list <- function(l, target_type) {
+  if(target_type == "list")
+    return(l)
+  l_null <- map_lgl(l, is.null)
+  l[l_null] <- .transform_function[[target_type]](NA)
+  return(unlist(l))
+}
+
 #' Metadata action: type
 #' 
 #' Convert a list column into a typed column.
@@ -1181,6 +1189,9 @@ MetadataActionType <- R6::R6Class(
             
             for(s in field) {
                s_sym <- sym(s)
+               if(is.list(data@variables %>% pull(s)))
+                 data@variables <- data@variables %>%
+                   mutate(!!s_sym := .fix_list(data@variables %>% pull(s), params$type))
                data@variables <- data@variables %>%
                   mutate(!!s := .transform_function[[params$type]](!!s_sym))
             }
@@ -1201,7 +1212,7 @@ MetadataActionType <- R6::R6Class(
                   fun <- .transform_function[[field_$dataType]]
                   if(field_$spectraKey %in% data@spectraVariables)
                      data_ <- data_ %>%
-                        mutate(!!col := fun(!!col))
+                        mutate(!!col := !!col %>% .fix_list(field_$dataType) %>% fun())
                   return(data_)
                }, .init = data@variables)
             return(data)     
