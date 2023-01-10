@@ -1,8 +1,22 @@
+# Note: The actions are specified in read direction. 
+# I.e. 
+# * when reading from file to Spectra, the actions run top to bottom,
+# * when writing from Spectra to file, the actions run bottom to top.
+
+# Specifies the order of fields in the MassBank file. This field is specified first because
+# in write direction it is executed last.
+
 - action: order
   order: [ACCESSION, RECORD_TITLE, DATE, AUTHORS, LICENSE, COPYRIGHT, PUBLICATION, PROJECT, COMMENT,
     'CH$NAME', 'CH$COMPOUND_CLASS', 'CH$FORMULA', 'CH$EXACT_MASS', 'CH$SMILES', 'CH$IUPAC', 'CH$LINK',
     'AC$INSTRUMENT', 'AC$INSTRUMENT_TYPE', 'AC$MASS_SPECTROMETRY', 'AC$CHROMATOGRAPHY', 'AC$GENERAL',
     'MS$FOCUSED_ION', 'MS$DATA_PROCESSING', 'PK$SPLASH', 'PK$ANNOTATION', 'PK$NUM_PEAK', 'PK$PEAK']
+    
+# Maps MassBank AC$CHROMATOGRAPHY: KEY VALUE to intermediate CHROM@KEY: VALUE, 
+# same for 
+# AC$MASS_SPECTROMETRY: KEY <-> MS@KEY
+# CH$LINK: KEY              <-> LINK@KEY
+# MS$FOCUSED_ION: KEY       <-> ION@KEY
 - action: nesting
   params:
   - { source: '*AC$CHROMATOGRAPHY', prefix: 'CHROM@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
@@ -10,6 +24,10 @@
       order: [MS_TYPE, ION_MODE, '*'] }
   - { source: '*CH$LINK', prefix: 'LINK@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
   - { source: '*MS$FOCUSED_ION', prefix: 'ION@', read: '(.*?)\s(.*)$', write: "{key} {value}" }
+
+# Sets default values in write direction (because "source" but not "target" is specified):
+# for CH$COMPOUND_CLASS, CH$SMILES, CH$IUPAC, CH$FORMULA a default of N/A is written if there
+# is no value set at this point (again, in bottom-up direction)
 - action: default
   params:
     - source: '*CH$COMPOUND_CLASS'
@@ -17,6 +35,14 @@
     - source: '*CH$IUPAC'
     - source: '*CH$FORMULA'
   write: 'N/A'
+  
+# Maps the intermediate variable MS@COLLISION_ENERGY
+# (derived from AC$MASS_SPECTROMETRY: COLLISION_ENERGY, see above)
+# to Spectra variable collisionEnergy and intermediate variable collisionEnergyUnit
+# specifying a regex in reading direction, and a glue template in writing direction
+
+# Same for CHROM@RETENTION_TIME (originally) AC$CHROMATOGRAPHY: RETENTION_TIME
+# <-> temp_rt, temp_rt_unit
 - action: extract
   params:
   - source: 'MS@COLLISION_ENERGY'
@@ -29,9 +55,18 @@
     write: '{temp_rt} {temp_rt_unit}'
     convert: TRUE
     trim: TRUE
+
+# Defines an (empty) default for the intermediate collisionEnergyUnit when
+# writing to MassBank file, because this is used in the template above
+# (or writing would fail when the variable isn't found!)
 - action: default
   source: 'collisionEnergyUnit'
   write: ''
+  
+# Defines how to write RECORD_TITLE in MassBank records.
+# Note that only the template for "write" is defined, but no regex for "read".
+# The reso
+
 - action: extract
   # composing RECORD_TITLE on-the-fly while writing according to specification
   # There is no reading, the fields are redundant
@@ -40,13 +75,28 @@
   target: [first_name, 'AC$INSTRUMENT_TYPE', 'MS@MS_TYPE']
   write: '{first_name}; {`AC$INSTRUMENT_TYPE`}; {`MS@MS_TYPE`}'
   #It consists of the values of CH$NAME; AC$INSTRUMENT_TYPE; AC$MASS_SPECTROMETRY: MS_TYPE.
+
+
+# This one is hard to understand.
+# "Crossmap" is an action that acts on multientry data, for example CH$NAME which may appear several times.
+# In read direction, "crossmap" reads all "source" fields, joins them, and splits the product into all "read_split" fields.
+# In write direction, "crossmap" reads all "target" fields, joins them, and splits the product into all "write_split" fields.
+# read_split and write_split are specified as a dict from field name to index list.
+# The index list contains either a list of integers (the positions to consume) or "*" (consume all remaining elements).
+# Therefore to read the first two elements into "firsttwo" and the rest into "rest", you would specify
+# read_split: { 'firsttwo': [1,2], 'rest': "*" }
+# There must be a better way to do this. Perhaps just separate the join and split actions as a first step.
+
+# Note: Here we are mapping CH$NAME into first_name in write direction,
+# using the first element only.
+# This is because we need exactly one name to construct the title.
 - action: crossmap
   # Extract the first name as the main name to use for composing the RECORD_TITLE
   source: first_name
   target: 'CH$NAME'
   write_split: {first_name: '1'}
-# Handle retention times
 
+# Translations
 - action: translate
   params:
   - source: 'temp_rt_unit'
@@ -97,7 +147,12 @@
     target: '*dataProcessing'
   - source: 'CHROM@SOLVENT'
     target: '*solvents'
-#
+
+# Mapping of Spectra fields to MassBank fields (with * in source param) 
+# or to intermediate fields (without * in source param)
+# For example, CH$IUPAC ends up in MassBank files therefore needs a *,
+# but LINK@CAS is only an intermediate that will be further transformed to
+# CH$LINK: CAS (above) and therefore is not "persisted" with *
 - action: mapping
   params:
   - { source: '*ACCESSION', target: 'accession' }

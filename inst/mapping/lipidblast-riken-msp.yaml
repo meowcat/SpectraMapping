@@ -1,3 +1,9 @@
+# Note: The "*" in front of names makes the field visible in the target object
+# (otherwise it's a "temporary" field and discarded.)
+# For "mapping", the "*" is implied because this is the purpose of the action
+
+# Map MSP fields to Spectra fields (this is bidirectional, both in read and write
+# direction)
 - action: mapping
   params: 
   - { source: 'NAME', target: "synonyms" }
@@ -12,6 +18,8 @@
   - { source: 'FORMULA', target: "formula" }
   - { source: 'Num Peaks', target: "peaksCount" }
   - { source: 'Comment', target: "comment" }
+# Set default values in Spectra fields (only "read" is specified, therefore
+# these fields are added when reading from 
 - action: default
   params:
   - { target: '*msLevel', read: 2 }
@@ -22,12 +30,15 @@
   - { target: "*publication", read: "doi:10.1038/nmeth.2551"}
   - { target: "*license", read: "CC-BY"}
   - { target: "*copyright", read: "Fiehn/Tsugawa"}
+# Map IONMODE: Positive to polarity: 1, Negative to 0 
+# in both read (msp -> Spectra) and write (Spectra -> msp) direction
 - action: translate
   source: IONMODE
   target: '*polarity'
   dictionary:
   - {value: 1, read: 'Positive', write: 'Positive'}
   - {value: 0, read: 'Negative', write: 'Negative'}
+# Set default variable types as defined in fields.yaml in SpectraMapping package
 - action: type
   defaults: TRUE
 
