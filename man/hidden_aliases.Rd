@@ -22,9 +22,9 @@
 \usage{
 \S4method{backendMerge}{MsBackendMapping}(object, ...)
 
-.peaksData.MsBackendMapping(object)
+.peaksData.MsBackendMapping(object, columns = c("mz", "intensity"), ...)
 
-\S4method{peaksData}{MsBackendMapping}(object)
+\S4method{peaksData}{MsBackendMapping}(object, columns = c("mz", "intensity"), ...)
 
 \S4method{intensity}{MsBackendMapping}(object)
 

@@ -30,7 +30,7 @@ LazyData: yes
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(markdown=TRUE)
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.3
 Collate: 
     'MsBackendMapping-functions.R'
     'hidden_aliases.R'
@@ -39,6 +39,17 @@ Collate:
     'massbank-format.R'
     'massbank-parser.R'
     'massbank-writer.R'
+    'metadata-actions-crossmap.R'
+    'metadata-actions-default.R'
+    'metadata-actions-extract.R'
+    'metadata-actions-mapping.R'
+    'metadata-actions-mutate.R'
+    'metadata-actions-nest.R'
+    'metadata-actions-order.R'
+    'metadata-actions-split.R'
+    'metadata-actions-tabular.R'
+    'metadata-actions-translate.R'
+    'metadata-actions-type.R'
     'metadata-actions.R'
     'metfrag-format.R'
     'metfrag-writer.R'
