@@ -221,7 +221,11 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), p
     terminate <- args$terminate
   else
     terminate <- "no"
-  
+  if("append" %in% names(args))
+    append <- args$append
+  else
+    append <- FALSE
+
   d <- spectraData(x)
   d$mz <- mz(x)
   d$intensity <- intensity(x)
@@ -273,7 +277,7 @@ setMethod("export", "MsBackendMapping", function(object, x, file = tempfile(), p
   if(terminate == "generate_spectra")
     return(export_files)
   
-  iwalk(export_files, ~ write_lines(.x, file=.y))
+  iwalk(export_files, ~ write_lines(.x, file=.y, append = append))
 })
 
 
