@@ -195,11 +195,21 @@ MetadataActionBase <- R6::R6Class(
          if(!is.null(self$settings$params)) {
             backend <- reduce(self$settings$params, function(data, params) {
                params_ <- self$merge_settings(params)
+               if(getOption("SpectraMapping")$verbose >= 3)
+                 self$log_level(INFO, glue("params: {str(params_)}"))
+               if("debug" %in% names(params_))
+                 if("read" %in% params_$debug)
+                   browser()
                data <- self$process_read(data, params_)
                return(data)
             }, .init = backend)
          }
          else {
+           if(getOption("SpectraMapping")$verbose >= 3)
+             self$log_level(INFO, glue("params: {str(self$settings)}"))
+           if("debug" %in% names(self$settings))
+             if("read" %in% self$settings$debug)
+               browser()
             backend <- self$process_read(backend, self$settings)
          }
          time_action_end <- Sys.time()
@@ -235,11 +245,21 @@ MetadataActionBase <- R6::R6Class(
          if(!is.null(self$settings$params)) {
             backend <- reduce(rev(self$settings$params), function(data, params) {
                params_ <- self$merge_settings(params)
+               if(getOption("SpectraMapping")$verbose >= 3)
+                 self$log_level(INFO, glue("params: {str(params_)}"))
+               if("debug" %in% names(params_))
+                 if("write" %in% params_$debug)
+                  browser()
                data <- self$process_write(data, params_)
                return(data)
             }, .init = backend)
          }
          else {
+           if(getOption("SpectraMapping")$verbose >= 3)
+             self$log_level(INFO, glue("params: {str(self$settings)}"))
+           if("debug" %in% names(self$settings))
+             if("write" %in% self$settings$debug)
+               browser()
             backend <- self$process_write(backend, self$settings)
          }
          time_action_end <- Sys.time()
