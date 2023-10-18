@@ -57,3 +57,30 @@
   
   .msp_writer_
 }
+
+.msp_joiner <- function(files, out_file) {
+  write_lines("", out_file)
+  
+  walk(files, function(f) {
+    d <- read_lines(f)
+    # Make sure there are precisely two newlines after the last spectrum
+    nonemptylines <- (d != "") * seq_along(d)
+    d <- d[seq(max(nonemptylines))]
+    d <- c(d, c("", ""))
+    write_lines(d, out_file, append=TRUE)
+  })}
+
+
+.msp_splitter <- function(input_file, out_file_schema = "chunk_{i}", spectra_per_file = 1) {
+  data <- read_lines(input_file)
+  split_pos <- (str_starts(data, fixed("Name:")))
+  split_assign <- cumsum(split_pos) - 1
+  split_data <- split(data, split_assign %/% spectra_per_file)
+
+  filenames <- imap_chr(split_data, function(d, i) {
+    filename <- glue(out_file_schema)
+    write_lines(d, filename, append=TRUE)
+    return(filename)
+  })
+  return(filenames)
+}

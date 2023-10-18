@@ -14,7 +14,9 @@ MsFormatMassbank <- function(parallel = FALSE, progress=FALSE, mapping = NULL) {
   format <- list(
     reader = .massbank_reader(parallel = parallel, progress=progress),
     mapping = mapping_,
-    writer = .massbank_writer()
+    writer = .massbank_writer(),
+    splitter = .massbank_splitter,
+    joiner = .massbank_joiner
   )
   
   class(format) <- c("MsFormat", class(format))

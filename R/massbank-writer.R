@@ -61,3 +61,26 @@
   }
   .massbank_writer_
 }
+
+.massbank_joiner <- function(files, out_file) {
+  warning("MassBank spectra are typically one per file. Joining will produce non-conformant files.")
+  write_lines("", out_file)
+  walk(files, function(f) {
+    d <- read_lines(f)
+    write_lines(d, out_file, append=TRUE)
+  })
+}
+
+.massbank_splitter <- function(input_file, out_file_schema = "chunk_{i}", spectra_per_file = 1) {
+  warning("MassBank spectra are typically one per file. Attempting to split anyway.")
+  data <- read_lines(input_file)
+  split_pos <- (data == "//")
+  split_assign <- cumsum(split_pos) - split_pos
+  split_data <- split(data, split_assign %/% spectra_per_file)
+  filenames <- imap_chr(split_data, function(d, i) {
+    filename <- glue(out_file_schema)
+    write_lines(d, filename, append=TRUE)
+    return(filename)
+  })
+  return(filenames)
+}

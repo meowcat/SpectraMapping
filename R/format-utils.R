@@ -71,6 +71,24 @@ setMethod("mapVariables", "Spectra", function(sp, mapping, ...) {
     stop("mapping for generic backends not yet implemented")
 } )
 
+
+#' @export 
+#' 
+#' 
+preSplit <- function(input_file, format, block_size, out_dir = NA, out_file_schema = "chunk{i}") {
+  if(is.na(out_dir)) {
+    out_dir <- tempfile()
+    fs::dir_create(out_dir)
+  }
+  format$splitter(input_file, 
+                  glue("[out_dir]/[out_file_schema]", .open = "[", .close = "]"),
+                  spectra_per_file = block_size)
+}
+
+postJoin <- function(input_files, out_file, format) {
+  format$joiner(input_files, out_file)
+}
+
 # 
 # 
 # setGeneric("writeVariables", function(sp, ...) {

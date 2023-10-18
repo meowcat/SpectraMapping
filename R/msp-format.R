@@ -14,7 +14,9 @@ MsFormatMsp <- function(parallel = FALSE, progress = FALSE, mapping = NULL) {
   format <- list(
     reader = .msp_reader(parallel = parallel, progress = progress),
     writer = .msp_writer(),
-    mapping = mapping_
+    mapping = mapping_,
+    splitter = .msp_splitter,
+    joiner = .msp_joiner
   ) 
   class(format) <- c("MsFormat", class(format))
   format
