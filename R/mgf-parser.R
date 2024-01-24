@@ -58,6 +58,7 @@ NULL
       bind_rows() %>%
       select(-type)
     ions <- spectrum_[!spectrum_lines_var & !spectrum_lines_end] %>%
+      stringr::str_trim() %>%
       paste0(collapse = "\n") %>%
       read_table2(col_names = c("mz", "int"),
                   col_types = 'dd')
