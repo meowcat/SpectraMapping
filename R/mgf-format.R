@@ -14,8 +14,10 @@ MsFormatMgf <- function(parallel = FALSE, progress=FALSE, mapping = NULL) {
   format <- list(
     reader = .mgf_reader(parallel = parallel, progress=progress),
     writer = .mgf_writer(),
-    mapping = mapping_
-  )
+    mapping = mapping_,
+    splitter = .mgf_splitter,
+    joiner = .mgf_joiner
+  ) 
   class(format) <- c("MsFormat", class(format))
   format
 }
