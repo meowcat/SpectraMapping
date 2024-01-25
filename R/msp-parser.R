@@ -151,7 +151,7 @@
       spectrum(x)
     },
     error=function(e) {
-      message("Error: ", x)
+      # message("Error: ", x)
       return(list(result=NULL))
     })
   }
